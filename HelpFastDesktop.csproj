@@ -16,10 +16,5 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="Forms_Backup\**" />
-    <EmbeddedResource Remove="Forms_Backup\**" />
-    <None Remove="Forms_Backup\**" />
-  </ItemGroup>
 
 </Project>

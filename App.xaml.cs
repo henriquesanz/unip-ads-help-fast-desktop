@@ -1,7 +1,8 @@
-using HelpFastDesktop.Data;
-using HelpFastDesktop.Services;
-using HelpFastDesktop.ViewModels;
-using HelpFastDesktop.Views;
+using HelpFastDesktop.Infrastructure.Data;
+using HelpFastDesktop.Core.Services;
+using HelpFastDesktop.Core.Interfaces;
+using HelpFastDesktop.Presentation.ViewModels;
+using HelpFastDesktop.Presentation.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
