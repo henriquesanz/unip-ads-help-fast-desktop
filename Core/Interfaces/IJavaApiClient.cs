@@ -1,5 +1,5 @@
-using HelpFastDesktop.Core.Entities;
-using HelpFastDesktop.Core.Entities.JavaApi;
+using HelpFastDesktop.Core.Models.Entities;
+using HelpFastDesktop.Core.Models.Entities.JavaApi;
 
 namespace HelpFastDesktop.Core.Interfaces;
 

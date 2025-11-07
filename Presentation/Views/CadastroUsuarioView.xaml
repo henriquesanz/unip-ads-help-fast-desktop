@@ -5,8 +5,10 @@
         Height="650" 
         Width="500"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
-        Background="#2D2D30">
+        ResizeMode="CanResize"
+        MinWidth="450"
+        MinHeight="550"
+        Background="#1D2935">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -35,7 +37,9 @@
                                FontWeight="Bold"
                                Foreground="White"
                                Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Nome, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox x:Name="NomeTextBox"
+                             Text="{Binding Nome, UpdateSourceTrigger=PropertyChanged}"
+                             TextChanged="NomeTextBox_TextChanged"
                              Height="35"
                              Background="#505053"
                              Foreground="White"
@@ -50,7 +54,9 @@
                                FontWeight="Bold"
                                Foreground="White"
                                Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox x:Name="EmailTextBox"
+                             Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                             TextChanged="EmailTextBox_TextChanged"
                              Height="35"
                              Background="#505053"
                              Foreground="White"
@@ -65,7 +71,9 @@
                                FontWeight="Bold"
                                Foreground="White"
                                Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Telefone, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox x:Name="TelefoneTextBox"
+                             Text="{Binding Telefone, UpdateSourceTrigger=PropertyChanged}"
+                             TextChanged="TelefoneTextBox_TextChanged"
                              Height="35"
                              Background="#505053"
                              Foreground="White"
@@ -97,8 +105,10 @@
                                FontWeight="Bold"
                                Foreground="White"
                                Margin="0,0,0,5"/>
-                    <ComboBox ItemsSource="{Binding TiposUsuarioDisponiveis}"
+                    <ComboBox x:Name="TipoUsuarioComboBox"
+                              ItemsSource="{Binding TiposUsuarioDisponiveis}"
                               SelectedItem="{Binding TipoUsuarioSelecionado}"
+                              SelectionChanged="TipoUsuarioComboBox_SelectionChanged"
                               Height="35"
                               Background="#505053"
                               Foreground="White"
@@ -130,7 +140,8 @@
                     Margin="30,20">
             
             <Button Content="{Binding TextoBotaoSalvar}"
-                    Command="{Binding SalvarCommand}"
+                    Click="SalvarButton_Click"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
                     Height="40"
                     Width="150"
                     Background="#0078D7"
@@ -166,7 +177,7 @@
             </Button>
 
             <Button Content="CANCELAR"
-                    Command="{Binding CancelarCommand}"
+                    Click="CancelarButton_Click"
                     Height="40"
                     Width="120"
                     Background="#505053"

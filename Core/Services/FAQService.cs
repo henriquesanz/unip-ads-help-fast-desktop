@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using HelpFastDesktop.Infrastructure.Data;
-using HelpFastDesktop.Core.Entities;
+using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
 
 namespace HelpFastDesktop.Core.Services;
@@ -20,27 +20,25 @@ public class FAQService : IFAQService
 
     public async Task<FAQItem?> ObterPorIdAsync(int id)
     {
-        return await _context.FAQ
-            .Include(f => f.CriadoPor)
+        return await _context.Faqs
+            // Include CriadoPor não existe
             .FirstOrDefaultAsync(f => f.Id == id);
     }
 
     public async Task<List<FAQItem>> ListarTodosAsync()
     {
-        return await _context.FAQ
-            .Include(f => f.CriadoPor)
-            .OrderBy(f => f.Categoria)
-            .ThenBy(f => f.Titulo)
+        return await _context.Faqs
+            // Include CriadoPor não existe
+            .OrderBy(f => f.Pergunta)
             .ToListAsync();
     }
 
     public async Task<List<FAQItem>> ListarAtivosAsync()
     {
-        return await _context.FAQ
-            .Include(f => f.CriadoPor)
+        return await _context.Faqs
+            // Include CriadoPor não existe
             .Where(f => f.Ativo)
-            .OrderBy(f => f.Categoria)
-            .ThenBy(f => f.Titulo)
+            .OrderBy(f => f.Pergunta)
             .ToListAsync();
     }
 
@@ -48,10 +46,8 @@ public class FAQService : IFAQService
     {
         try
         {
-            faq.DataCriacao = DateTime.Now;
-            faq.Visualizacoes = 0;
-            
-            _context.FAQ.Add(faq);
+            // Propriedades DataCriacao e Visualizacoes não existem no banco
+            _context.Faqs.Add(faq);
             await _context.SaveChangesAsync();
             
             return faq;
@@ -67,8 +63,8 @@ public class FAQService : IFAQService
     {
         try
         {
-            faq.DataAtualizacao = DateTime.Now;
-            _context.FAQ.Update(faq);
+            // Propriedade DataAtualizacao não existe no banco
+            _context.Faqs.Update(faq);
             await _context.SaveChangesAsync();
             
             return faq;
@@ -84,10 +80,10 @@ public class FAQService : IFAQService
     {
         try
         {
-            var faq = await _context.FAQ.FindAsync(id);
+            var faq = await _context.Faqs.FindAsync(id);
             if (faq == null) return false;
 
-            _context.FAQ.Remove(faq);
+            _context.Faqs.Remove(faq);
             await _context.SaveChangesAsync();
             
             return true;
@@ -110,22 +106,21 @@ public class FAQService : IFAQService
 
         var termoLower = termo.ToLower();
         
-        return await _context.FAQ
+        return await _context.Faqs
             .Where(f => f.Ativo && (
                 f.Titulo.ToLower().Contains(termoLower) ||
                 f.Descricao.ToLower().Contains(termoLower) ||
                 f.Solucao.ToLower().Contains(termoLower) ||
-                f.Tags.ToLower().Contains(termoLower)
+                false // Tags não existe no banco
             ))
-            .OrderByDescending(f => f.Visualizacoes)
-            .ThenByDescending(f => f.Utilidade)
+            .OrderBy(f => f.Pergunta)
             .ToListAsync();
     }
 
     public async Task<List<FAQItem>> BuscarPorCategoriaAsync(string categoria)
     {
-        return await _context.FAQ
-            .Where(f => f.Ativo && f.Categoria == categoria)
+        return await _context.Faqs
+            .Where(f => f.Ativo) // Categoria não existe
             .OrderBy(f => f.Titulo)
             .ToListAsync();
     }
@@ -134,15 +129,15 @@ public class FAQService : IFAQService
     {
         var tagLower = tag.ToLower();
         
-        return await _context.FAQ
-            .Where(f => f.Ativo && f.Tags.ToLower().Contains(tagLower))
-            .OrderByDescending(f => f.Visualizacoes)
+        return await _context.Faqs
+            .Where(f => f.Ativo && (f.Pergunta.ToLower().Contains(tagLower) || f.Resposta.ToLower().Contains(tagLower)))
+            .OrderBy(f => f.Pergunta)
             .ToListAsync();
     }
 
     public async Task<List<FAQItem>> BuscarAvancadaAsync(string? termo, string? categoria, string? tags)
     {
-        var query = _context.FAQ.Where(f => f.Ativo);
+        var query = _context.Faqs.Where(f => f.Ativo);
 
         if (!string.IsNullOrWhiteSpace(termo))
         {
@@ -155,18 +150,17 @@ public class FAQService : IFAQService
 
         if (!string.IsNullOrWhiteSpace(categoria))
         {
-            query = query.Where(f => f.Categoria == categoria);
+            // Categoria não existe, ignorando filtro
         }
 
         if (!string.IsNullOrWhiteSpace(tags))
         {
             var tagsLower = tags.ToLower();
-            query = query.Where(f => f.Tags.ToLower().Contains(tagsLower));
+            // Tags não existe, ignorando filtro
         }
 
         return await query
-            .OrderByDescending(f => f.Visualizacoes)
-            .ThenByDescending(f => f.Utilidade)
+            .OrderBy(f => f.Pergunta)
             .ToListAsync();
     }
 
@@ -176,9 +170,9 @@ public class FAQService : IFAQService
 
     public async Task<List<string>> ListarCategoriasAsync()
     {
-        return await _context.FAQ
+        return await _context.Faqs
             .Where(f => f.Ativo)
-            .Select(f => f.Categoria)
+            .Select(f => "Geral") // Categoria não existe
             .Distinct()
             .OrderBy(c => c)
             .ToListAsync();
@@ -186,9 +180,9 @@ public class FAQService : IFAQService
 
     public async Task<List<string>> ListarSubcategoriasAsync(string categoria)
     {
-        return await _context.FAQ
-            .Where(f => f.Ativo && f.Categoria == categoria && !string.IsNullOrEmpty(f.Subcategoria))
-            .Select(f => f.Subcategoria!)
+        return await _context.Faqs
+            .Where(f => f.Ativo) // Categoria e Subcategoria não existem
+            .Select(f => "")
             .Distinct()
             .OrderBy(s => s)
             .ToListAsync();
@@ -196,10 +190,9 @@ public class FAQService : IFAQService
 
     public async Task<List<FAQItem>> ListarPorCategoriaAsync(string categoria)
     {
-        return await _context.FAQ
-            .Where(f => f.Ativo && f.Categoria == categoria)
-            .OrderBy(f => f.Subcategoria)
-            .ThenBy(f => f.Titulo)
+        return await _context.Faqs
+            .Where(f => f.Ativo) // Categoria não existe
+            .OrderBy(f => f.Pergunta)
             .ToListAsync();
     }
 
@@ -211,10 +204,10 @@ public class FAQService : IFAQService
     {
         try
         {
-            var faq = await _context.FAQ.FindAsync(faqId);
+            var faq = await _context.Faqs.FindAsync(faqId);
             if (faq != null)
             {
-                faq.Visualizacoes++;
+                // Visualizacoes não existe no banco
                 await _context.SaveChangesAsync();
             }
         }
@@ -228,11 +221,10 @@ public class FAQService : IFAQService
     {
         try
         {
-            var faq = await _context.FAQ.FindAsync(faqId);
+            var faq = await _context.Faqs.FindAsync(faqId);
             if (faq != null && rating >= 1 && rating <= 5)
             {
-                faq.Utilidade = rating;
-                faq.DataAtualizacao = DateTime.Now;
+                // Utilidade e DataAtualizacao não existem no banco
                 await _context.SaveChangesAsync();
             }
         }
@@ -244,19 +236,18 @@ public class FAQService : IFAQService
 
     public async Task<List<FAQItem>> ObterMaisVisualizadosAsync(int limite = 10)
     {
-        return await _context.FAQ
+        return await _context.Faqs
             .Where(f => f.Ativo)
-            .OrderByDescending(f => f.Visualizacoes)
+            .OrderBy(f => f.Pergunta)
             .Take(limite)
             .ToListAsync();
     }
 
     public async Task<List<FAQItem>> ObterMaisUtilizadosAsync(int limite = 10)
     {
-        return await _context.FAQ
-            .Where(f => f.Ativo && f.Utilidade.HasValue)
-            .OrderByDescending(f => f.Utilidade)
-            .ThenByDescending(f => f.Visualizacoes)
+        return await _context.Faqs
+            .Where(f => f.Ativo)
+            .OrderBy(f => f.Pergunta)
             .Take(limite)
             .ToListAsync();
     }
@@ -289,13 +280,12 @@ public class FAQService : IFAQService
             // Filtrar por categoria se especificada
             if (!string.IsNullOrEmpty(categoria))
             {
-                faqs = faqs.Where(f => f.Categoria == categoria).ToList();
+                // Categoria não existe, ignorando filtro
             }
 
             // Ordenar por relevância (utilidade e visualizações)
             return faqs
-                .OrderByDescending(f => f.Utilidade ?? 0)
-                .ThenByDescending(f => f.Visualizacoes)
+                .OrderBy(f => f.Pergunta)
                 .Take(5)
                 .ToList();
         }
@@ -312,44 +302,17 @@ public class FAQService : IFAQService
 
     public async Task<Dictionary<string, int>> ObterEstatisticasPorCategoriaAsync()
     {
-        return await _context.FAQ
+        return await _context.Faqs
             .Where(f => f.Ativo)
-            .GroupBy(f => f.Categoria)
+            .GroupBy(f => "Geral") // Categoria não existe, agrupando todos
             .ToDictionaryAsync(g => g.Key, g => g.Count());
     }
 
     public async Task<List<string>> ObterTermosMaisBuscadosAsync()
     {
+        // Tags não existe no banco, retornando lista vazia
         // Esta implementação seria melhorada com uma tabela de termos de busca
-        // Por enquanto, retorna as tags mais comuns
-        var todasTags = await _context.FAQ
-            .Where(f => f.Ativo && !string.IsNullOrEmpty(f.Tags))
-            .Select(f => f.Tags)
-            .ToListAsync();
-
-        var contadorTags = new Dictionary<string, int>();
-        
-        foreach (var tagString in todasTags)
-        {
-            var tags = tagString.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var tag in tags)
-            {
-                var tagTrimmed = tag.Trim().ToLower();
-                if (!string.IsNullOrEmpty(tagTrimmed))
-                {
-                    if (contadorTags.ContainsKey(tagTrimmed))
-                        contadorTags[tagTrimmed]++;
-                    else
-                        contadorTags[tagTrimmed] = 1;
-                }
-            }
-        }
-
-        return contadorTags
-            .OrderByDescending(kvp => kvp.Value)
-            .Take(10)
-            .Select(kvp => kvp.Key)
-            .ToList();
+        return new List<string>();
     }
 
     #endregion

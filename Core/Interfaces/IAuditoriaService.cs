@@ -1,4 +1,4 @@
-using HelpFastDesktop.Core.Entities;
+using HelpFastDesktop.Core.Models.Entities;
 
 namespace HelpFastDesktop.Core.Interfaces;
 

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using HelpFastDesktop.Infrastructure.Data;
-using HelpFastDesktop.Core.Entities;
+using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
 
 namespace HelpFastDesktop.Core.Services;

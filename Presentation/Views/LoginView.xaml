@@ -5,8 +5,10 @@
         Height="600" 
         Width="800"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
-        Background="#2D2D30">
+        ResizeMode="CanResize"
+        MinWidth="600"
+        MinHeight="500"
+        Background="#1D2935">
     
     <Grid>
         <Grid.ColumnDefinitions>
@@ -15,13 +17,14 @@
         </Grid.ColumnDefinitions>
 
         <!-- Logo Panel -->
-        <Border Grid.Column="0" Background="#2D2D30">
+        <Border Grid.Column="0" Background="#1D2935">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="HELP FAST" 
-                           FontSize="24" 
-                           FontWeight="Bold" 
-                           Foreground="#0078D7"
-                           HorizontalAlignment="Center"/>
+                <Image Source="pack://application:,,,/Assets/Images/logo.png" 
+                       Width="150" 
+                       Height="150"
+                       Stretch="Uniform"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
 
@@ -44,7 +47,7 @@
                                Foreground="White"
                                Margin="0,0,0,5"/>
                     <TextBox x:Name="EmailTextBox"
-                             Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                             TextChanged="EmailTextBox_TextChanged"
                              Height="35"
                              Background="#505053"
                              Foreground="White"
@@ -77,7 +80,8 @@
 
                 <!-- Login Button -->
                 <Button Content="{Binding IsLoading, Converter={StaticResource LoadingToTextConverter}}"
-                        Command="{Binding LoginCommand}"
+                        Click="LoginButton_Click"
+                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
                         Height="45"
                         Background="#0078D7"
                         Foreground="White"
@@ -113,7 +117,7 @@
 
                 <!-- Register Button -->
                 <Button Content="CADASTRAR"
-                        Command="{Binding CadastrarCommand}"
+                        Click="CadastrarButton_Click"
                         Background="Transparent"
                         Foreground="#0078D7"
                         BorderThickness="0"

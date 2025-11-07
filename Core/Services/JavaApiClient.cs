@@ -1,10 +1,11 @@
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using HelpFastDesktop.Infrastructure.Data;
-using HelpFastDesktop.Core.Entities;
+using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
-using HelpFastDesktop.Core.Entities.JavaApi;
+using HelpFastDesktop.Core.Models.Entities.JavaApi;
 using System.Net.Http;
 
 namespace HelpFastDesktop.Core.Services;
@@ -55,6 +56,14 @@ public class JavaApiClient : IJavaApiClient
         var config = await _context.ConfiguracoesSistema
             .FirstOrDefaultAsync(c => c.Chave == "ia_atribuicao_ativa");
         return bool.TryParse(config?.Valor, out var ativa) && ativa;
+    }
+
+    public async Task<string> GetN8nWebhookUrlAsync()
+    {
+        var config = await _context.ConfiguracoesSistema
+            .FirstOrDefaultAsync(c => c.Chave == "n8n_webhook_chat_url");
+        // URL do webhook do n8n para chat com IA
+        return config?.Valor ?? "https://n8n.grupoopt.com.br/webhook-test/58ab6b56-d816-48eb-a2cc-b0601d1e6d11";
     }
 
     #endregion
@@ -144,23 +153,84 @@ public class JavaApiClient : IJavaApiClient
     {
         try
         {
-            var baseUrl = await GetBaseUrlAsync();
-            var url = $"{baseUrl}/chat/mensagem";
+            // Usar webhook do n8n para chat
+            var webhookUrl = await GetN8nWebhookUrlAsync();
 
+            // Preparar requisição no formato esperado pelo webhook n8n
+            // O n8n geralmente espera os dados no body da requisição POST
             var request = new
             {
                 usuarioId = usuarioId,
                 mensagem = mensagem,
-                contexto = contexto
+                contexto = contexto,
+                // Adicionar timestamp para rastreamento
+                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
             };
 
-            var response = await MakeRequestAsync<ChatResponse>(url, HttpMethod.Post, request);
-            return response ?? new ChatResponse();
+            Console.WriteLine($"[CHAT IA] Enviando mensagem para webhook n8n: {webhookUrl}");
+            Console.WriteLine($"[CHAT IA] UsuarioId: {usuarioId}, Mensagem: {mensagem}");
+
+            // Chamar webhook do n8n e processar resposta
+            var response = await MakeRequestWithFlexibleParsingAsync(webhookUrl, HttpMethod.Post, request);
+            
+            if (response != null && !string.IsNullOrEmpty(response.Resposta))
+            {
+                Console.WriteLine($"[CHAT IA] Resposta recebida com sucesso: {response.Resposta.Substring(0, Math.Min(100, response.Resposta.Length))}...");
+                return response;
+            }
+
+            // Se a resposta não vier no formato esperado, retornar resposta padrão
+            Console.WriteLine("[CHAT IA] AVISO: Resposta do webhook n8n não pôde ser processada corretamente");
+            return new ChatResponse 
+            { 
+                Resposta = "Desculpe, não consegui processar sua mensagem. Tente novamente mais tarde.",
+                EscalarParaHumano = true
+            };
+        }
+        catch (HttpRequestException httpEx)
+        {
+            var errorMessage = $"Erro HTTP ao comunicar com webhook n8n: {httpEx.Message}";
+            if (httpEx.InnerException != null)
+            {
+                errorMessage += $" | Erro interno: {httpEx.InnerException.Message}";
+            }
+            Console.WriteLine($"[CHAT IA] ERRO HTTP: {errorMessage}");
+            Console.WriteLine($"[CHAT IA] Stack trace: {httpEx.StackTrace}");
+            
+            return new ChatResponse 
+            { 
+                Resposta = $"Erro de comunicação com o serviço de IA. Detalhes: {httpEx.Message}. Por favor, verifique sua conexão e tente novamente.",
+                EscalarParaHumano = true
+            };
+        }
+        catch (TaskCanceledException timeoutEx)
+        {
+            var errorMessage = $"Timeout ao comunicar com webhook n8n: {timeoutEx.Message}";
+            Console.WriteLine($"[CHAT IA] ERRO TIMEOUT: {errorMessage}");
+            Console.WriteLine($"[CHAT IA] Stack trace: {timeoutEx.StackTrace}");
+            
+            return new ChatResponse 
+            { 
+                Resposta = "O serviço de IA demorou muito para responder. Por favor, tente novamente mais tarde.",
+                EscalarParaHumano = true
+            };
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Erro ao enviar mensagem de chat para usuário {UsuarioId}: ex");
-            return new ChatResponse { Resposta = "Desculpe, ocorreu um erro ao processar sua mensagem." };
+            var errorMessage = $"Erro inesperado ao enviar mensagem de chat para usuário {usuarioId}: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" | Erro interno: {ex.InnerException.Message}";
+            }
+            Console.WriteLine($"[CHAT IA] ERRO GERAL: {errorMessage}");
+            Console.WriteLine($"[CHAT IA] Tipo de exceção: {ex.GetType().Name}");
+            Console.WriteLine($"[CHAT IA] Stack trace: {ex.StackTrace}");
+            
+            return new ChatResponse 
+            { 
+                Resposta = $"Erro ao processar sua mensagem. Detalhes técnicos: {ex.GetType().Name} - {ex.Message}. Por favor, tente novamente ou entre em contato com o suporte.",
+                EscalarParaHumano = true
+            };
         }
     }
 
@@ -265,6 +335,314 @@ public class JavaApiClient : IJavaApiClient
     #endregion
 
     #region Métodos Auxiliares
+
+    private async Task<ChatResponse?> MakeRequestWithFlexibleParsingAsync(string url, HttpMethod method, object? content = null)
+    {
+        var retryAttempts = await GetRetryAttemptsAsync();
+        var timeout = await GetTimeoutAsync();
+
+        for (int attempt = 1; attempt <= retryAttempts; attempt++)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(method, url);
+
+                // Adicionar headers padrão
+                request.Headers.Add("Accept", "application/json");
+                request.Headers.Add("User-Agent", "HelpFastDesktop/1.0");
+
+                if (content != null)
+                {
+                    var json = JsonSerializer.Serialize(content, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+                    
+                    Console.WriteLine($"[HTTP REQUEST] Tentativa {attempt}/{retryAttempts}");
+                    Console.WriteLine($"[HTTP REQUEST] URL: {url}");
+                    Console.WriteLine($"[HTTP REQUEST] Método: {method.Method}");
+                    Console.WriteLine($"[HTTP REQUEST] Body JSON: {json}");
+                    
+                    request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                }
+                else
+                {
+                    Console.WriteLine($"[HTTP REQUEST] Tentativa {attempt}/{retryAttempts}");
+                    Console.WriteLine($"[HTTP REQUEST] URL: {url}");
+                    Console.WriteLine($"[HTTP REQUEST] Método: {method.Method}");
+                    Console.WriteLine($"[HTTP REQUEST] Body: (vazio)");
+                }
+
+                // Configurar timeout
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+
+                var response = await _httpClient.SendAsync(request, cts.Token);
+
+                Console.WriteLine($"[HTTP RESPONSE] Status Code: {(int)response.StatusCode} ({response.StatusCode})");
+                Console.WriteLine($"[HTTP RESPONSE] Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Resposta bruta do webhook n8n: {responseContent.Substring(0, Math.Min(200, responseContent.Length))}...");
+                    
+                    // Tentar deserializar como ChatResponse padrão
+                    try
+                    {
+                        var chatResponse = JsonSerializer.Deserialize<ChatResponse>(responseContent, new JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        });
+                        
+                        if (chatResponse != null && !string.IsNullOrEmpty(chatResponse.Resposta))
+                        {
+                            Console.WriteLine("Resposta parseada com sucesso usando formato ChatResponse padrão");
+                            return chatResponse;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Tentativa de deserialização padrão falhou: {ex.Message}");
+                    }
+
+                    // Tentar parsear como resposta do n8n (pode vir em diferentes formatos)
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(responseContent);
+                        var root = doc.RootElement;
+
+                        var chatResponse = new ChatResponse();
+
+                        // Se a resposta for um array, pegar o primeiro elemento
+                        if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
+                        {
+                            root = root[0];
+                        }
+
+                        // Tentar diferentes formatos de resposta do n8n
+                        if (root.TryGetProperty("resposta", out var respostaProp))
+                        {
+                            chatResponse.Resposta = ExtractStringValue(respostaProp);
+                        }
+                        else if (root.TryGetProperty("message", out var messageProp))
+                        {
+                            chatResponse.Resposta = ExtractStringValue(messageProp);
+                        }
+                        else if (root.TryGetProperty("text", out var textProp))
+                        {
+                            chatResponse.Resposta = ExtractStringValue(textProp);
+                        }
+                        else if (root.TryGetProperty("output", out var outputProp))
+                        {
+                            // n8n pode retornar dados em "output"
+                            chatResponse.Resposta = ExtractStringValue(outputProp);
+                        }
+                        else if (root.TryGetProperty("data", out var dataProp))
+                        {
+                            // n8n pode retornar dados em "data"
+                            if (dataProp.TryGetProperty("resposta", out var dataResposta))
+                            {
+                                chatResponse.Resposta = ExtractStringValue(dataResposta);
+                            }
+                            else if (dataProp.TryGetProperty("message", out var dataMessage))
+                            {
+                                chatResponse.Resposta = ExtractStringValue(dataMessage);
+                            }
+                            else
+                            {
+                                chatResponse.Resposta = ExtractStringValue(dataProp);
+                            }
+                        }
+                        else if (root.ValueKind == JsonValueKind.String)
+                        {
+                            // Se a resposta for uma string simples
+                            chatResponse.Resposta = root.GetString() ?? string.Empty;
+                        }
+                        else
+                        {
+                            // Tentar usar o primeiro valor encontrado ou o JSON completo
+                            chatResponse.Resposta = responseContent.Length > 1000 
+                                ? responseContent.Substring(0, 1000) + "..." 
+                                : responseContent;
+                        }
+
+                        // Verificar se há indicação de escalação
+                        if (root.TryGetProperty("escalarParaHumano", out var escalarProp))
+                        {
+                            chatResponse.EscalarParaHumano = escalarProp.GetBoolean();
+                        }
+                        else if (root.TryGetProperty("escalate", out var escalateProp))
+                        {
+                            chatResponse.EscalarParaHumano = escalateProp.GetBoolean();
+                        }
+                        else if (root.TryGetProperty("escalar", out var escalarProp2))
+                        {
+                            chatResponse.EscalarParaHumano = escalarProp2.GetBoolean();
+                        }
+
+                        // Verificar categoria
+                        if (root.TryGetProperty("categoria", out var categoriaProp))
+                        {
+                            chatResponse.Categoria = ExtractStringValue(categoriaProp);
+                        }
+                        else if (root.TryGetProperty("category", out var categoryProp))
+                        {
+                            chatResponse.Categoria = ExtractStringValue(categoryProp);
+                        }
+
+                        // Verificar confiança
+                        if (root.TryGetProperty("confianca", out var confiancaProp))
+                        {
+                            chatResponse.Confianca = ExtractDecimalValue(confiancaProp);
+                        }
+                        else if (root.TryGetProperty("confidence", out var confidenceProp))
+                        {
+                            chatResponse.Confianca = ExtractDecimalValue(confidenceProp);
+                        }
+
+                        // Verificar sugestões FAQ
+                        if (root.TryGetProperty("sugestoesFAQ", out var sugestoesProp) && sugestoesProp.ValueKind == JsonValueKind.Array)
+                        {
+                            chatResponse.SugestoesFAQ = sugestoesProp.EnumerateArray()
+                                .Select(e => ExtractStringValue(e))
+                                .Where(s => !string.IsNullOrEmpty(s))
+                                .ToList()!;
+                        }
+                        else if (root.TryGetProperty("faqSuggestions", out var faqProp) && faqProp.ValueKind == JsonValueKind.Array)
+                        {
+                            chatResponse.SugestoesFAQ = faqProp.EnumerateArray()
+                                .Select(e => ExtractStringValue(e))
+                                .Where(s => !string.IsNullOrEmpty(s))
+                                .ToList()!;
+                        }
+
+                        if (!string.IsNullOrEmpty(chatResponse.Resposta))
+                        {
+                            Console.WriteLine("Resposta parseada com sucesso usando parsing flexível");
+                            return chatResponse;
+                        }
+                    }
+                    catch (Exception parseEx)
+                    {
+                        Console.WriteLine($"Erro ao parsear resposta do webhook n8n: {parseEx.Message}");
+                        Console.WriteLine($"Stack trace: {parseEx.StackTrace}");
+                    }
+
+                    // Se não conseguiu parsear, retornar resposta genérica com o conteúdo recebido
+                    Console.WriteLine("Não foi possível parsear a resposta, retornando conteúdo bruto");
+                    return new ChatResponse
+                    {
+                        Resposta = responseContent.Length > 500 ? responseContent.Substring(0, 500) + "..." : responseContent,
+                        EscalarParaHumano = false
+                    };
+                }
+
+                // Ler conteúdo da resposta de erro para diagnóstico
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[HTTP ERROR] Tentativa {attempt}/{retryAttempts} falhou");
+                Console.WriteLine($"[HTTP ERROR] Status Code: {(int)response.StatusCode} ({response.StatusCode})");
+                Console.WriteLine($"[HTTP ERROR] URL: {url}");
+                Console.WriteLine($"[HTTP ERROR] Resposta do servidor: {errorContent.Substring(0, Math.Min(500, errorContent.Length))}");
+
+                if (attempt == retryAttempts)
+                {
+                    Console.WriteLine($"[HTTP ERROR] Todas as {retryAttempts} tentativas falharam para URL {url}");
+                    Console.WriteLine($"[HTTP ERROR] Última resposta: Status {response.StatusCode}, Conteúdo: {errorContent}");
+                    
+                    // Retornar resposta de erro mais detalhada
+                    return new ChatResponse
+                    {
+                        Resposta = $"Erro ao comunicar com o serviço de IA. Status HTTP: {(int)response.StatusCode} ({response.StatusCode}). " +
+                                  $"Por favor, verifique sua conexão ou tente novamente mais tarde.",
+                        EscalarParaHumano = true
+                    };
+                }
+
+                // Aguardar antes da próxima tentativa (exponential backoff)
+                var delaySeconds = Math.Pow(2, attempt - 1);
+                Console.WriteLine($"[HTTP RETRY] Aguardando {delaySeconds} segundos antes da próxima tentativa...");
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+            }
+            catch (HttpRequestException httpEx)
+            {
+                var errorMessage = $"Erro HTTP na tentativa {attempt}/{retryAttempts}: {httpEx.Message}";
+                if (httpEx.InnerException != null)
+                {
+                    errorMessage += $" | Erro interno: {httpEx.InnerException.Message}";
+                }
+                Console.WriteLine($"[HTTP EXCEPTION] {errorMessage}");
+                Console.WriteLine($"[HTTP EXCEPTION] URL: {url}");
+                Console.WriteLine($"[HTTP EXCEPTION] Stack trace: {httpEx.StackTrace}");
+
+                if (attempt == retryAttempts)
+                {
+                    throw new HttpRequestException(
+                        $"Falha ao comunicar com webhook n8n após {retryAttempts} tentativas. " +
+                        $"URL: {url}. Erro: {httpEx.Message}", 
+                        httpEx);
+                }
+            }
+            catch (TaskCanceledException timeoutEx)
+            {
+                Console.WriteLine($"[HTTP TIMEOUT] Timeout na tentativa {attempt}/{retryAttempts} para URL {url}");
+                Console.WriteLine($"[HTTP TIMEOUT] Timeout configurado: {timeout} segundos");
+                Console.WriteLine($"[HTTP TIMEOUT] Erro: {timeoutEx.Message}");
+
+                if (attempt == retryAttempts)
+                {
+                    throw new TimeoutException(
+                        $"Timeout ao comunicar com webhook n8n após {retryAttempts} tentativas. " +
+                        $"URL: {url}. Timeout configurado: {timeout} segundos.", 
+                        timeoutEx);
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Erro inesperado na tentativa {attempt}/{retryAttempts} para URL {url}: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    errorMessage += $" | Erro interno: {ex.InnerException.Message}";
+                }
+                Console.WriteLine($"[HTTP EXCEPTION] {errorMessage}");
+                Console.WriteLine($"[HTTP EXCEPTION] Tipo: {ex.GetType().Name}");
+                Console.WriteLine($"[HTTP EXCEPTION] Stack trace: {ex.StackTrace}");
+
+                if (attempt == retryAttempts)
+                    throw;
+            }
+        }
+
+        Console.WriteLine($"[HTTP ERROR] Todas as tentativas foram esgotadas sem sucesso para URL {url}");
+        return null;
+    }
+
+    private static string ExtractStringValue(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Number => element.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => string.Empty,
+            JsonValueKind.Object => element.GetRawText(),
+            JsonValueKind.Array => string.Join(", ", element.EnumerateArray().Select(ExtractStringValue)),
+            _ => element.GetRawText()
+        };
+    }
+
+    private static decimal? ExtractDecimalValue(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Number)
+        {
+            return element.GetDecimal();
+        }
+        else if (element.ValueKind == JsonValueKind.String && decimal.TryParse(element.GetString(), out var decimalValue))
+        {
+            return decimalValue;
+        }
+        return null;
+    }
 
     private async Task<T?> MakeRequestAsync<T>(string url, HttpMethod method, object? content = null) where T : class
     {

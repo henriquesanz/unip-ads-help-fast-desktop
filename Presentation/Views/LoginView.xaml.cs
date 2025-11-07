@@ -1,49 +1,47 @@
-using HelpFastDesktop.Presentation.ViewModels;
-using HelpFastDesktop.Core.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
+using HelpFastDesktop.Core.Models;
+using HelpFastDesktop.Presentation.Controllers;
 using System.Windows;
 
 namespace HelpFastDesktop.Presentation.Views;
 
 public partial class LoginView : Window
 {
-    public LoginView(LoginViewModel viewModel)
+    private readonly LoginController _controller;
+
+    public LoginView(LoginController controller)
     {
         InitializeComponent();
-        DataContext = viewModel;
+        _controller = controller;
         
-        // Subscribir aos eventos do ViewModel
-        viewModel.LoginSuccessful += OnLoginSuccessful;
-        viewModel.NavigateToCadastroRequested += OnNavigateToCadastroRequested;
+        // Usar o Model como DataContext
+        DataContext = _controller.GetModel();
+        
+        // Subscribir aos eventos do Controller
+        _controller.OnLoginSuccessful += OnLoginSuccessful;
     }
 
     private void OnLoginSuccessful()
     {
-        // Fechar a tela de login e abrir o dashboard
-        var dashboardViewModel = new DashboardViewModel(
-            App.ServiceProvider!.GetRequiredService<ISessionService>(),
-            App.ServiceProvider!.GetRequiredService<IChamadoService>(),
-            App.ServiceProvider!.GetRequiredService<IUsuarioService>());
-        var dashboardView = new DashboardView(dashboardViewModel);
-        dashboardView.Show();
         this.Close();
     }
 
-    private void OnNavigateToCadastroRequested()
+    private void EmailTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
-        // Abrir tela de cadastro
-        var cadastroViewModel = new CadastroUsuarioViewModel(
-            App.ServiceProvider!.GetRequiredService<ISessionService>(),
-            App.ServiceProvider!.GetRequiredService<IUsuarioService>());
-        var cadastroView = new CadastroUsuarioView(cadastroViewModel);
-        cadastroView.ShowDialog();
+        _controller.SetEmail(EmailTextBox.Text);
     }
 
     private void SenhaPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        if (DataContext is LoginViewModel viewModel)
-        {
-            viewModel.Senha = SenhaPasswordBox.Password;
-        }
+        _controller.SetSenha(SenhaPasswordBox.Password);
+    }
+
+    private void LoginButton_Click(object sender, RoutedEventArgs e)
+    {
+        _ = _controller.LoginAsync();
+    }
+
+    private void CadastrarButton_Click(object sender, RoutedEventArgs e)
+    {
+        _controller.NavigateToCadastro();
     }
 }

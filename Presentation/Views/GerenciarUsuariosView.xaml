@@ -1,0 +1,129 @@
+<Window x:Class="HelpFastDesktop.Presentation.Views.GerenciarUsuariosView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Gerenciar Usuários" 
+        Height="700" 
+        Width="1000"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        MinWidth="800"
+        MinHeight="500"
+        Background="#1D2935">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#C85000" Height="80">
+            <Grid Margin="20,10">
+                <TextBlock Text="Gerenciar Usuários" 
+                           FontSize="18" 
+                           FontWeight="Bold" 
+                           Foreground="White"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Content -->
+        <Grid Grid.Row="1" Margin="20">
+            <DataGrid ItemsSource="{Binding Usuarios}"
+                      SelectedItem="{Binding UsuarioSelecionado}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      GridLinesVisibility="All"
+                      HeadersVisibility="Column"
+                      Background="#464649"
+                      Foreground="White"
+                      BorderBrush="#505053"
+                      RowBackground="#464649"
+                      AlternatingRowBackground="#3C3C3F"
+                      SelectionMode="Single"
+                      SelectionChanged="DataGrid_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
+                    <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
+                    <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
+                    <DataGridTextColumn Header="Telefone" Binding="{Binding Telefone}" Width="150"/>
+                    <DataGridTextColumn Header="Tipo" Binding="{Binding TipoUsuarioDisplay}" Width="150"/>
+                    <DataGridTextColumn Header="Último Login" Binding="{Binding UltimoLogin, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="150"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <!-- Footer -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="20">
+            <Button Content="ATUALIZAR"
+                    Click="AtualizarButton_Click"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
+                    Height="35"
+                    Width="120"
+                    Background="#C85000"
+                    Foreground="White"
+                    BorderThickness="0"
+                    FontSize="10"
+                    FontWeight="Bold"
+                    Margin="0,0,10,0"
+                    Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            CornerRadius="3">
+                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                        VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#B04500"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Content="FECHAR"
+                    Click="FecharButton_Click"
+                    Height="35"
+                    Width="100"
+                    Background="#505053"
+                    Foreground="#C8C8C8"
+                    BorderThickness="0"
+                    FontSize="10"
+                    Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            CornerRadius="3">
+                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                        VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#606063"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
+

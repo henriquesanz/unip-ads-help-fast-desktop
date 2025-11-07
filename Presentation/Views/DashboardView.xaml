@@ -6,9 +6,10 @@
         Width="1200"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
+        ResizeMode="CanResize"
         MinWidth="1000"
         MinHeight="600"
-        Background="#2D2D30">
+        Background="#1D2935">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -44,7 +45,7 @@
                 <!-- Logout Button -->
                 <Button Grid.Column="1" 
                         Content="LOGOUT"
-                        Command="{Binding LogoutCommand}"
+                        Click="LogoutButton_Click"
                         Height="40"
                         Width="120"
                         Background="#C83232"

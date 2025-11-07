@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using HelpFastDesktop.Infrastructure.Data;
-using HelpFastDesktop.Core.Entities;
+using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
-using HelpFastDesktop.Core.Entities.JavaApi;
+using HelpFastDesktop.Core.Models.Entities.JavaApi;
 
 namespace HelpFastDesktop.Core.Services;
 
@@ -117,7 +117,6 @@ public class NotificacaoService : INotificacaoService
                 Titulo = "Chamado Criado",
                 Mensagem = $"Seu chamado '{chamado.Titulo}' foi criado com sucesso e recebeu o ID #{chamado.Id}.",
                 Prioridade = "Media",
-                Canal = "InApp",
                 ChamadoId = chamado.Id,
                 Acao = "visualizar_chamado"
             };
@@ -142,7 +141,6 @@ public class NotificacaoService : INotificacaoService
                 Titulo = "Chamado Atribuído",
                 Mensagem = $"Seu chamado '{chamado.Titulo}' foi atribuído ao técnico {tecnico.Nome}.",
                 Prioridade = "Media",
-                Canal = "InApp",
                 ChamadoId = chamado.Id,
                 Acao = "visualizar_chamado"
             };
@@ -157,7 +155,6 @@ public class NotificacaoService : INotificacaoService
                 Titulo = "Novo Chamado Atribuído",
                 Mensagem = $"Você recebeu um novo chamado: '{chamado.Titulo}' (ID #{chamado.Id}).",
                 Prioridade = chamado.IsUrgente ? "Alta" : "Media",
-                Canal = "InApp",
                 ChamadoId = chamado.Id,
                 Acao = "atender_chamado"
             };
@@ -181,7 +178,6 @@ public class NotificacaoService : INotificacaoService
                 Titulo = "Chamado Resolvido",
                 Mensagem = $"Seu chamado '{chamado.Titulo}' foi resolvido. Por favor, confirme se a solução atende suas necessidades.",
                 Prioridade = "Media",
-                Canal = "InApp",
                 ChamadoId = chamado.Id,
                 Acao = "avaliar_chamado"
             };
@@ -209,7 +205,6 @@ public class NotificacaoService : INotificacaoService
                     Titulo = "Novo Comentário",
                     Mensagem = $"Há um novo comentário no seu chamado '{chamado.Titulo}' por {usuarioComentario?.Nome}.",
                     Prioridade = "Media",
-                    Canal = "InApp",
                     ChamadoId = chamado.Id,
                     Acao = "visualizar_comentarios"
                 };
@@ -234,7 +229,6 @@ public class NotificacaoService : INotificacaoService
                 Titulo = "Status Alterado",
                 Mensagem = $"O status do seu chamado '{chamado.Titulo}' foi alterado de '{statusAnterior}' para '{chamado.Status}'.",
                 Prioridade = "Media",
-                Canal = "InApp",
                 ChamadoId = chamado.Id,
                 Acao = "visualizar_chamado"
             };
@@ -427,13 +421,13 @@ public class NotificacaoService : INotificacaoService
             return;
 
         // Enviar por email se configurado
-        if (configuracao.EmailAtivo && notificacao.Canal != "InApp")
+        if (configuracao.EmailAtivo)
         {
             await EnviarNotificacaoEmailAsync(notificacao);
         }
 
         // Enviar push se configurado
-        if (configuracao.PushAtivo && notificacao.Canal == "Push")
+        if (configuracao.PushAtivo)
         {
             await EnviarNotificacaoPushAsync(notificacao);
         }

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using HelpFastDesktop.Infrastructure.Data;
-using HelpFastDesktop.Core.Entities;
+using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
 
 namespace HelpFastDesktop.Core.Services;
@@ -119,7 +119,7 @@ public class RelatorioService : IRelatorioService
                 ChamadosEmAndamento = chamados.Count(c => c.Status == "EmAndamento"),
                 ChamadosAtrasados = chamados.Count(c => c.IsAtrasado),
                 TempoMedioResolucao = chamados.Where(c => c.TempoResolucao.HasValue)
-                    .Average(c => (decimal)c.TempoResolucao.Value) / 60, // converter para horas
+                    .Average(c => (decimal)c.TempoResolucao.Value.TotalHours), // converter para horas
                 TaxaResolucao = chamados.Count > 0 ? 
                     (decimal)chamados.Count(c => c.Status == "Resolvido" || c.Status == "Fechado") / chamados.Count * 100 : 0,
                 SatisfacaoMedia = chamados.Where(c => c.Satisfacao.HasValue)
@@ -135,7 +135,7 @@ public class RelatorioService : IRelatorioService
                     TotalChamados = g.Count(),
                     ChamadosResolvidos = g.Count(c => c.Status == "Resolvido" || c.Status == "Fechado"),
                     TempoMedioResolucao = g.Where(c => c.TempoResolucao.HasValue)
-                        .Average(c => (decimal)c.TempoResolucao.Value) / 60,
+                        .Average(c => (decimal)c.TempoResolucao.Value.TotalHours),
                     TaxaResolucao = g.Count() > 0 ? 
                         (decimal)g.Count(c => c.Status == "Resolvido" || c.Status == "Fechado") / g.Count() * 100 : 0
                 })
@@ -151,7 +151,7 @@ public class RelatorioService : IRelatorioService
                     TotalChamados = g.Count(),
                     ChamadosResolvidos = g.Count(c => c.Status == "Resolvido" || c.Status == "Fechado"),
                     TempoMedioResolucao = g.Where(c => c.TempoResolucao.HasValue)
-                        .Average(c => (decimal)c.TempoResolucao.Value) / 60,
+                        .Average(c => (decimal)c.TempoResolucao.Value.TotalHours),
                     SatisfacaoMedia = g.Where(c => c.Satisfacao.HasValue)
                         .Average(c => (decimal)c.Satisfacao.Value)
                 })
@@ -168,7 +168,7 @@ public class RelatorioService : IRelatorioService
                     Categoria = c.Categoria ?? "Não categorizado",
                     DataCriacao = c.DataCriacao,
                     DataResolucao = c.DataResolucao,
-                    TempoResolucao = c.TempoResolucao.HasValue ? (decimal)c.TempoResolucao.Value / 60 : 0,
+                    TempoResolucao = c.TempoResolucao.HasValue ? (decimal)c.TempoResolucao.Value.TotalHours : 0,
                     Satisfacao = c.Satisfacao,
                     UsuarioNome = c.Usuario?.Nome ?? "N/A",
                     TecnicoNome = c.Tecnico?.Nome
@@ -336,14 +336,14 @@ public class RelatorioService : IRelatorioService
 
             // Comentários de satisfação
             relatorio.Comentarios = chamados
-                .Where(c => !string.IsNullOrEmpty(c.ComentarioSatisfacao))
+                .Where(c => c.Satisfacao.HasValue) // ComentarioSatisfacao não existe no banco
                 .Select(c => new ComentarioSatisfacao
                 {
                     ChamadoId = c.Id,
                     UsuarioNome = c.Usuario?.Nome ?? "N/A",
                     Satisfacao = c.Satisfacao!.Value,
-                    Comentario = c.ComentarioSatisfacao!,
-                    DataAvaliacao = c.DataResolucao!.Value
+                    Comentario = "", // ComentarioSatisfacao não existe no banco
+                    DataAvaliacao = c.DataResolucao ?? DateTime.Now
                 })
                 .ToList();
 
@@ -407,7 +407,7 @@ public class RelatorioService : IRelatorioService
                 ChamadosResolvidos = chamados.Count(c => c.DataResolucao >= dataInicio && c.DataResolucao < dataFim),
                 ChamadosFechados = chamados.Count(c => c.DataFechamento >= dataInicio && c.DataFechamento < dataFim),
                 TempoMedioResolucao = chamados.Where(c => c.TempoResolucao.HasValue)
-                    .Average(c => (decimal)c.TempoResolucao.Value),
+                    .Average(c => (decimal)c.TempoResolucao.Value.TotalHours),
                 SatisfacaoMedia = chamados.Where(c => c.Satisfacao.HasValue)
                     .Average(c => (decimal)c.Satisfacao.Value),
                 UsuariosAtivos = chamados.Select(c => c.UsuarioId).Distinct().Count(),
@@ -464,7 +464,7 @@ public class RelatorioService : IRelatorioService
                 ChamadosResolvidosHoje = chamadosHoje.Count(c => c.Status == "Resolvido" || c.Status == "Fechado"),
                 ChamadosAtrasados = chamadosHoje.Count(c => c.IsAtrasado),
                 TempoMedioResolucao = chamados30Dias.Where(c => c.TempoResolucao.HasValue)
-                    .Average(c => (decimal)c.TempoResolucao.Value) / 60, // converter para horas
+                    .Average(c => (decimal)c.TempoResolucao.Value.TotalHours), // converter para horas
                 SatisfacaoMedia = chamados30Dias.Where(c => c.Satisfacao.HasValue)
                     .Average(c => (decimal)c.Satisfacao.Value),
                 TaxaResolucaoPrimeiroContato = 0

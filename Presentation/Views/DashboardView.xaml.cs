@@ -1,20 +1,25 @@
-using HelpFastDesktop.Presentation.ViewModels;
-using HelpFastDesktop.Core.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
+using HelpFastDesktop.Core.Models;
+using HelpFastDesktop.Presentation.Controllers;
+using HelpFastDesktop;
 using System.Windows;
 
 namespace HelpFastDesktop.Presentation.Views;
 
 public partial class DashboardView : Window
 {
-    public DashboardView(DashboardViewModel viewModel)
+    private readonly DashboardController _controller;
+
+    public DashboardView(DashboardController controller)
     {
         InitializeComponent();
-        DataContext = viewModel;
+        _controller = controller;
         
-        // Subscribir aos eventos do ViewModel
-        viewModel.LogoutRequested += OnLogoutRequested;
-        viewModel.NavigateToFormRequested += OnNavigateToFormRequested;
+        // Usar o Model como DataContext
+        DataContext = _controller.GetModel();
+        
+        // Subscribir aos eventos do Controller
+        _controller.OnLogoutRequested += OnLogoutRequested;
+        _controller.OnNavigateToFormRequested += OnNavigateToFormRequested;
     }
 
     private void OnLogoutRequested()
@@ -24,17 +29,20 @@ public partial class DashboardView : Window
         
         if (result == MessageBoxResult.Yes)
         {
-            var loginViewModel = new LoginViewModel(App.ServiceProvider!.GetRequiredService<ISessionService>());
-            var loginView = new LoginView(loginViewModel);
-            loginView.Show();
-            this.Close();
+            // Voltar para a tela de login
+            var navigationController = new NavigationController(App.ServiceProvider!);
+            navigationController.ShowLogin(this);
         }
     }
 
     private void OnNavigateToFormRequested(string formName)
     {
-        // Por enquanto, vamos apenas mostrar uma mensagem
-        MessageBox.Show($"Navegando para: {formName}", "Navegação", 
-                       MessageBoxButton.OK, MessageBoxImage.Information);
+        var navigationController = new NavigationController(App.ServiceProvider!);
+        navigationController.NavigateToForm(formName, this);
+    }
+
+    private void LogoutButton_Click(object sender, RoutedEventArgs e)
+    {
+        _controller.Logout();
     }
 }

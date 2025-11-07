@@ -1,7 +1,7 @@
 <Application x:Class="HelpFastDesktop.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:HelpFastDesktop.Presentation.ViewModels">
+             xmlns:converters="clr-namespace:HelpFastDesktop.Presentation.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -9,11 +9,16 @@
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Converters -->
-            <local:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
-            <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
-            <local:UserRoleToStringConverter x:Key="UserRoleToStringConverter"/>
-            <local:LoadingToTextConverter x:Key="LoadingToTextConverter"/>
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+            <converters:UserRoleToStringConverter x:Key="UserRoleToStringConverter"/>
+            <converters:LoadingToTextConverter x:Key="LoadingToTextConverter"/>
+            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+            <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
+            <converters:BooleanToAlignmentConverter x:Key="BooleanToAlignmentConverter"/>
+            <converters:PrioridadeToColorConverter x:Key="PrioridadeToColorConverter"/>
             
         </ResourceDictionary>
     </Application.Resources>

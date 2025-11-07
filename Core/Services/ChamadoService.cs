@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using HelpFastDesktop.Infrastructure.Data;
-using HelpFastDesktop.Core.Entities;
+using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
 
 namespace HelpFastDesktop.Core.Services;
@@ -19,7 +19,7 @@ public class ChamadoService : IChamadoService
     public async Task<Chamado?> ObterPorIdAsync(int id)
     {
         return await _context.Chamados
-            .Include(c => c.Usuario)
+            .Include(c => c.Cliente)
             .Include(c => c.Tecnico)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
@@ -33,7 +33,6 @@ public class ChamadoService : IChamadoService
 
     public async Task<Chamado> AtualizarChamadoAsync(Chamado chamado)
     {
-        chamado.DataAtualizacao = DateTime.Now;
         _context.Chamados.Update(chamado);
         await _context.SaveChangesAsync();
         return chamado;
@@ -53,39 +52,39 @@ public class ChamadoService : IChamadoService
     public async Task<List<Chamado>> ListarChamadosDoUsuarioAsync(int usuarioId)
     {
         return await _context.Chamados
-            .Include(c => c.Usuario)
+            .Include(c => c.Cliente)
             .Include(c => c.Tecnico)
-            .Where(c => c.UsuarioId == usuarioId)
-            .OrderByDescending(c => c.DataCriacao)
+            .Where(c => c.ClienteId == usuarioId)
+            .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
     }
 
     public async Task<List<Chamado>> ListarTodosChamadosAsync()
     {
         return await _context.Chamados
-            .Include(c => c.Usuario)
+            .Include(c => c.Cliente)
             .Include(c => c.Tecnico)
-            .OrderByDescending(c => c.DataCriacao)
+            .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
     }
 
     public async Task<List<Chamado>> ListarChamadosPorStatusAsync(string status)
     {
         return await _context.Chamados
-            .Include(c => c.Usuario)
+            .Include(c => c.Cliente)
             .Include(c => c.Tecnico)
             .Where(c => c.Status == status)
-            .OrderByDescending(c => c.DataCriacao)
+            .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
     }
 
     public async Task<List<Chamado>> ListarChamadosPorPrioridadeAsync(string prioridade)
     {
+        // Prioridade não existe mais na tabela, retornando todos
         return await _context.Chamados
-            .Include(c => c.Usuario)
+            .Include(c => c.Cliente)
             .Include(c => c.Tecnico)
-            .Where(c => c.Prioridade == prioridade)
-            .OrderByDescending(c => c.DataCriacao)
+            .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
     }
 
@@ -97,7 +96,6 @@ public class ChamadoService : IChamadoService
 
         chamado.TecnicoId = tecnicoId;
         chamado.Status = "EmAndamento";
-        chamado.DataAtualizacao = DateTime.Now;
 
         await _context.SaveChangesAsync();
         return chamado;
@@ -109,8 +107,7 @@ public class ChamadoService : IChamadoService
         if (chamado == null) throw new ArgumentException("Chamado não encontrado");
 
         chamado.Status = "Resolvido";
-        chamado.DataResolucao = DateTime.Now;
-        chamado.DataAtualizacao = DateTime.Now;
+        chamado.DataFechamento = DateTime.Now;
 
         await _context.SaveChangesAsync();
         return chamado;
@@ -119,10 +116,10 @@ public class ChamadoService : IChamadoService
     public async Task<List<Chamado>> ListarChamadosAtribuidosAsync(int tecnicoId)
     {
         return await _context.Chamados
-            .Include(c => c.Usuario)
+            .Include(c => c.Cliente)
             .Include(c => c.Tecnico)
             .Where(c => c.TecnicoId == tecnicoId)
-            .OrderByDescending(c => c.DataCriacao)
+            .OrderByDescending(c => c.DataAbertura)
             .ToListAsync();
     }
 
@@ -137,7 +134,7 @@ public class ChamadoService : IChamadoService
 
         // Cliente só pode ver seus próprios chamados
         if (usuario.TipoUsuario == UserRole.Cliente)
-            return chamado.UsuarioId == usuarioId;
+            return chamado.ClienteId == usuarioId;
 
         // Técnico e Administrador podem ver todos
         return usuario.PodeVerTodosChamados;
