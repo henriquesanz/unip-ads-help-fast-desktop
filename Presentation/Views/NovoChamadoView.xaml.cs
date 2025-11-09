@@ -40,6 +40,14 @@ public partial class NovoChamadoView : Window
         }
     }
 
+    private void AssuntoTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (DataContext is NovoChamadoModel model)
+        {
+            _controller.SetAssunto(model.Assunto);
+        }
+    }
+
     private async void CriarButton_Click(object sender, RoutedEventArgs e)
     {
         await _controller.CriarChamadoAsync();

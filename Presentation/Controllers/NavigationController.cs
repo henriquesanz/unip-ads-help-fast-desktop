@@ -1,8 +1,5 @@
-using HelpFastDesktop.Core.Interfaces;
 using HelpFastDesktop.Presentation.Views;
-using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
-using HelpFastDesktop.Presentation.Controllers;
 
 namespace HelpFastDesktop.Presentation.Controllers;
 
@@ -16,10 +13,19 @@ public class NavigationController : BaseController
 
     public void ShowLogin(Window? currentWindowToClose = null)
     {
-        currentWindowToClose?.Close();
         var controller = new LoginController(ServiceProvider);
         var view = new LoginView(controller);
-        ShowWindow(view);
+        if (_currentWindow != null && _currentWindow != currentWindowToClose)
+        {
+            _currentWindow.Close();
+        }
+
+        view.Show();
+        Application.Current.MainWindow = view;
+
+        currentWindowToClose?.Close();
+
+        _currentWindow = view;
     }
 
     public void ShowDashboard()
@@ -76,38 +82,14 @@ public class NavigationController : BaseController
                 case "ChatIA":
                     ShowChatIA(currentWindow);
                     break;
-                case "Notificacoes":
-                    ShowNotificacoes(currentWindow);
-                    break;
-                case "ConfigNotificacoes":
-                    ShowConfigNotificacoes(currentWindow);
-                    break;
                 case "GerenciarUsuarios":
                     ShowGerenciarUsuarios(currentWindow);
                     break;
                 case "CadastrarUsuario":
                     ShowCadastroUsuario();
                     break;
-                case "Permissoes":
-                    ShowPermissoes(currentWindow);
-                    break;
                 case "Relatorios":
                     ShowRelatorios(currentWindow);
-                    break;
-                case "Metricas":
-                    ShowMetricas(currentWindow);
-                    break;
-                case "Satisfacao":
-                    ShowSatisfacao(currentWindow);
-                    break;
-                case "Configuracoes":
-                    ShowConfiguracoes(currentWindow);
-                    break;
-                case "Auditoria":
-                    ShowAuditoria(currentWindow);
-                    break;
-                case "Backup":
-                    ShowBackup(currentWindow);
                     break;
                 default:
                     MessageBox.Show($"Tela '{formName}' ainda não implementada.", "Aviso", 
@@ -171,20 +153,6 @@ public class NavigationController : BaseController
         ShowWindowAsDialog(view, currentWindow);
     }
 
-    private void ShowNotificacoes(Window? currentWindow)
-    {
-        var controller = new NotificacoesController(ServiceProvider);
-        var view = new NotificacoesView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
-    private void ShowConfigNotificacoes(Window? currentWindow)
-    {
-        var controller = new ConfigNotificacoesController(ServiceProvider);
-        var view = new ConfigNotificacoesView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
     private void ShowGerenciarUsuarios(Window? currentWindow)
     {
         var controller = new GerenciarUsuariosController(ServiceProvider);
@@ -192,52 +160,10 @@ public class NavigationController : BaseController
         ShowWindowAsDialog(view, currentWindow);
     }
 
-    private void ShowPermissoes(Window? currentWindow)
-    {
-        var controller = new PermissoesController(ServiceProvider);
-        var view = new PermissoesView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
     private void ShowRelatorios(Window? currentWindow)
     {
         var controller = new RelatoriosController(ServiceProvider);
         var view = new RelatoriosView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
-    private void ShowMetricas(Window? currentWindow)
-    {
-        var controller = new MetricasController(ServiceProvider);
-        var view = new MetricasView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
-    private void ShowSatisfacao(Window? currentWindow)
-    {
-        var controller = new SatisfacaoController(ServiceProvider);
-        var view = new SatisfacaoView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
-    private void ShowConfiguracoes(Window? currentWindow)
-    {
-        var controller = new ConfiguracoesController(ServiceProvider);
-        var view = new ConfiguracoesView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
-    private void ShowAuditoria(Window? currentWindow)
-    {
-        var controller = new AuditoriaController(ServiceProvider);
-        var view = new AuditoriaView(controller);
-        ShowWindowAsDialog(view, currentWindow);
-    }
-
-    private void ShowBackup(Window? currentWindow)
-    {
-        var controller = new BackupController(ServiceProvider);
-        var view = new BackupView(controller);
         ShowWindowAsDialog(view, currentWindow);
     }
 

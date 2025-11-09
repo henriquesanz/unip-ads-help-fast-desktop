@@ -9,179 +9,90 @@
         ResizeMode="CanResize"
         MinWidth="1000"
         MinHeight="600"
-        Background="#1D2935">
+        Background="#1C2937"
+        Style="{x:Null}">
     
-    <Grid>
+    <Window.Resources>
+        <Style x:Key="DashboardActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Margin" Value="10,12,10,0"/>
+            <Setter Property="Height" Value="56"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="MinWidth" Value="300"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Background="#1C2937">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="#0078D7" Height="100">
-            <Grid Margin="20,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <Grid Grid.Row="0" Margin="20">
+            <Button Content="Sair"
+                    Click="LogoutButton_Click"
+                    Width="120"
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource ActionButtonStyle}"/>
+        </Grid>
 
-                <!-- User Info -->
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding NomeUsuario, StringFormat='Bem-vindo, {0}'}" 
-                               FontSize="16" 
-                               FontWeight="Bold" 
-                               Foreground="White"/>
-                    <TextBlock FontSize="11" 
-                               Foreground="#DCDCDC">
-                        <TextBlock.Text>
-                            <MultiBinding StringFormat="{}{0} - {1}">
-                                <Binding Path="TipoUsuario"/>
-                                <Binding Path="DescricaoTipoUsuario"/>
-                            </MultiBinding>
-                        </TextBlock.Text>
-                    </TextBlock>
-                </StackPanel>
+        <Grid Grid.Row="1">
+            <Grid HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  MaxWidth="960">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                <!-- Logout Button -->
-                <Button Grid.Column="1" 
-                        Content="LOGOUT"
-                        Click="LogoutButton_Click"
-                        Height="40"
-                        Width="120"
-                        Background="#C83232"
-                        Foreground="White"
-                        BorderThickness="0"
-                        FontSize="10"
-                        FontWeight="Bold"
-                        VerticalAlignment="Center"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="3">
-                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                            VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#E04545"/>
-                                            </Trigger>
-                                            <Trigger Property="IsPressed" Value="True">
-                                                <Setter Property="Background" Value="#A52A2A"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
-                </Button>
-            </Grid>
-        </Border>
+                <Image Grid.Row="0"
+                       Source="pack://application:,,,/Assets/Images/logo.png"
+                       Height="80"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,30"/>
 
-        <!-- Content -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Background="#3C3C3F">
-            <StackPanel Margin="20">
-                
-                <!-- Main Title -->
-                <TextBlock Text="Dashboard - Ações Disponíveis" 
-                           FontSize="18" 
-                           FontWeight="Bold" 
+                <TextBlock Grid.Row="1"
+                           FontSize="24"
+                           FontWeight="Bold"
                            Foreground="White"
-                           Margin="0,0,0,30"/>
+                           TextAlignment="Center"
+                           Margin="0,0,0,20">
+                    <TextBlock.Text>
+                        <MultiBinding StringFormat='Olá {0}'>
+                            <Binding Path="NomeUsuario"/>
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
 
-                <!-- Sections -->
-                <ItemsControl ItemsSource="{Binding Sections}">
+                <ItemsControl Grid.Row="2"
+                              ItemsSource="{Binding AllActions}"
+                              Margin="0,10,0,0"
+                              HorizontalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Width="{Binding ActionsContainerWidth}"
+                                       ItemWidth="300"
+                                       MinWidth="320"
+                                       HorizontalAlignment="Center"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="#464649" 
-                                    CornerRadius="5" 
-                                    Margin="0,0,0,20" 
-                                    Padding="15">
-                                
-                                <StackPanel>
-                                    <!-- Section Title -->
-                                    <TextBlock Text="{Binding Title}" 
-                                               FontSize="14" 
-                                               FontWeight="Bold" 
-                                               Foreground="#0078D7"
-                                               Margin="0,0,0,15"/>
-                                    
-                                    <!-- Actions Grid -->
-                                    <ItemsControl ItemsSource="{Binding Actions}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <UniformGrid Columns="3"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Command="{Binding Command}"
-                                                        Height="100"
-                                                        Margin="8"
-                                                        Background="{Binding Color}"
-                                                        Foreground="White"
-                                                        BorderThickness="0"
-                                                        FontSize="10"
-                                                        FontWeight="Bold"
-                                                        Cursor="Hand"
-                                                        ToolTip="{Binding Description}">
-                                                    
-                                                    <Button.Content>
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Title}" 
-                                                                       FontWeight="Bold"
-                                                                       TextWrapping="Wrap"
-                                                                       TextAlignment="Center"
-                                                                       Margin="0,0,0,5"/>
-                                                            <TextBlock Text="{Binding Description}" 
-                                                                       FontSize="8"
-                                                                       TextWrapping="Wrap"
-                                                                       TextAlignment="Center"
-                                                                       Opacity="0.9"/>
-                                                        </StackPanel>
-                                                    </Button.Content>
-                                                    
-                                                    <Button.Style>
-                                                        <Style TargetType="Button">
-                                                            <Setter Property="Template">
-                                                                <Setter.Value>
-                                                                    <ControlTemplate TargetType="Button">
-                                                                        <Border Background="{TemplateBinding Background}" 
-                                                                                CornerRadius="5">
-                                                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="10"/>
-                                                                        </Border>
-                                                                        <ControlTemplate.Triggers>
-                                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                                <Setter Property="RenderTransform">
-                                                                                    <Setter.Value>
-                                                                                        <ScaleTransform ScaleX="1.05" ScaleY="1.05"/>
-                                                                                    </Setter.Value>
-                                                                                </Setter>
-                                                                            </Trigger>
-                                                                        </ControlTemplate.Triggers>
-                                                                    </ControlTemplate>
-                                                                </Setter.Value>
-                                                            </Setter>
-                                                        </Style>
-                                                    </Button.Style>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
+                            <Button Style="{StaticResource DashboardActionButtonStyle}"
+                                    Command="{Binding Command}"
+                                    ToolTip="{Binding Description}">
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           Foreground="#161D28"
+                                           TextAlignment="Center"/>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
-            </StackPanel>
-        </ScrollViewer>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

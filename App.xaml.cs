@@ -1,9 +1,11 @@
-using HelpFastDesktop.Infrastructure.Data;
-using HelpFastDesktop.Core.Services;
 using HelpFastDesktop.Core.Interfaces;
+using HelpFastDesktop.Core.Models;
+using HelpFastDesktop.Core.Services;
+using HelpFastDesktop.Infrastructure.Data;
 using HelpFastDesktop.Presentation.Controllers;
 using HelpFastDesktop.Presentation.Views;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Windows;
@@ -140,34 +142,41 @@ public partial class App : Application
         return Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
             {
-                // String de conexão para Azure SQL
-                var connectionString = "Server=help-fast-server.database.windows.net,1433;" +
-                                      "Database=help-fast-database;" +
-                                      "User Id=help-fast-admin;" +
-                                      "Password=23568974123@Pim;" +
-                                      "Encrypt=True;" +
-                                      "TrustServerCertificate=False;" +
-                                      "Connection Timeout=30;" +
-                                      "Command Timeout=30;";
+                var configuration = context.Configuration;
+                var databaseSection = configuration.GetSection("Database");
+
+                var connectionString = configuration.GetConnectionString("Default")
+                    ?? databaseSection.GetValue<string>("ConnectionString")
+                    ?? throw new InvalidOperationException(
+                        "Configure a string de conexão em ConnectionStrings:Default ou Database:ConnectionString.");
+
+                var commandTimeout = databaseSection.GetValue<int?>("CommandTimeout") ?? 30;
+                var enableRetryOnFailure = databaseSection.GetValue<bool?>("EnableRetryOnFailure") ?? true;
+                var maxRetryCount = databaseSection.GetValue<int?>("MaxRetryCount") ?? 3;
+                var maxRetryDelaySeconds = databaseSection.GetValue<int?>("MaxRetryDelaySeconds") ?? 5;
+                var enableSensitiveDataLogging = databaseSection.GetValue<bool?>("EnableSensitiveDataLogging") ?? false;
 
                 services.AddDbContext<ApplicationDbContext>(options =>
                 {
                     options.UseSqlServer(connectionString, sqlOptions =>
                     {
-                        sqlOptions.CommandTimeout(30);
-                        sqlOptions.EnableRetryOnFailure(
-                            maxRetryCount: 3,
-                            maxRetryDelay: TimeSpan.FromSeconds(5),
-                            errorNumbersToAdd: null);
+                        sqlOptions.CommandTimeout(commandTimeout);
+
+                        if (enableRetryOnFailure)
+                        {
+                            sqlOptions.EnableRetryOnFailure(
+                                maxRetryCount: maxRetryCount,
+                                maxRetryDelay: TimeSpan.FromSeconds(maxRetryDelaySeconds),
+                                errorNumbersToAdd: null);
+                        }
                     });
                     // Não criar banco automaticamente - as tabelas já existem no Azure SQL
-                    options.EnableSensitiveDataLogging(false);
+                    options.EnableSensitiveDataLogging(enableSensitiveDataLogging);
                 });
 
-                // Registrar HttpClient para JavaApiClient
-                services.AddHttpClient<IJavaApiClient, JavaApiClient>();
-
                 // Registrar serviços
+                services.Configure<GoogleDriveOptions>(context.Configuration.GetSection("GoogleDrive"));
+                services.Configure<OpenAIOptions>(context.Configuration.GetSection("OpenAI"));
                 services.AddScoped<ISessionService, SessionService>();
                 services.AddScoped<IUsuarioService, UsuarioService>();
                 services.AddScoped<IChamadoService, ChamadoService>();
@@ -176,6 +185,8 @@ public partial class App : Application
                 services.AddScoped<IFAQService, FAQService>();
                 services.AddScoped<IRelatorioService, RelatorioService>();
                 services.AddScoped<IAuditoriaService, AuditoriaService>();
+                services.AddSingleton<IGoogleDriveService, GoogleDriveService>();
+                services.AddHttpClient<IOpenAIService, OpenAIService>();
             });
     }
 

@@ -2,19 +2,17 @@ using Microsoft.EntityFrameworkCore;
 using HelpFastDesktop.Infrastructure.Data;
 using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
-using HelpFastDesktop.Core.Models.Entities.JavaApi;
+ 
 
 namespace HelpFastDesktop.Core.Services;
 
 public class NotificacaoService : INotificacaoService
 {
     private readonly ApplicationDbContext _context;
-    private readonly IJavaApiClient _javaApiClient;
 
-    public NotificacaoService(ApplicationDbContext context, IJavaApiClient javaApiClient)
+    public NotificacaoService(ApplicationDbContext context)
     {
         _context = context;
-        _javaApiClient = javaApiClient;
     }
 
     #region Notificações Básicas
@@ -319,33 +317,10 @@ public class NotificacaoService : INotificacaoService
             var configuracao = await ObterConfiguracaoUsuarioAsync(notificacao.UsuarioId);
             if (!configuracao.EmailAtivo) return false;
 
-            var request = new NotificacaoRequest
-            {
-                Tipo = notificacao.Tipo,
-                Destinatario = new Destinatario
-                {
-                    Email = usuario.Email,
-                    Nome = usuario.Nome
-                }
-            };
-
-            if (notificacao.ChamadoId.HasValue)
-            {
-                var chamado = await _context.Chamados.FindAsync(notificacao.ChamadoId);
-                if (chamado != null)
-                {
-                    request.Chamado = new ChamadoInfo
-                    {
-                        Id = chamado.Id,
-                        Titulo = chamado.Titulo,
-                        Status = chamado.Status,
-                        Prioridade = chamado.Prioridade
-                    };
-                }
-            }
-
-            var response = await _javaApiClient.EnviarNotificacaoAsync(request);
-            return response.Status == "enviada";
+            // Integração de envio de email não implementada.
+            // Neste momento apenas registra no log e considera como enviado.
+            Console.WriteLine("Envio de email para usuário {0}: {1}", usuario.Email, notificacao.Titulo);
+            return true;
         }
         catch (Exception ex)
         {

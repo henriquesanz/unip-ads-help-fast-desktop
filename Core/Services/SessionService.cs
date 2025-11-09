@@ -18,26 +18,27 @@ public class SessionService : ISessionService
 
     public async Task<bool> FazerLoginAsync(string email, string senha)
     {
+        Console.WriteLine($"[LOGIN] Iniciando autenticação. Email recebido: '{email ?? "<null>"}'.");
+
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(senha))
         {
-            System.Diagnostics.Debug.WriteLine("Email ou senha vazios no login");
+            Console.WriteLine("[LOGIN][ERRO] Email ou senha não informados.");
             return false;
         }
 
         try
         {
-            // Obter usuário do banco (fazendo consulta única na tabela Usuarios)
-            var usuario = await _usuarioService.ObterPorEmailAsync(email);
-            if (usuario == null)
+            var credenciaisValidas = await _usuarioService.ValidarLoginAsync(email, senha);
+            if (!credenciaisValidas)
             {
-                System.Diagnostics.Debug.WriteLine($"Usuário não encontrado para email: {email}");
+                Console.WriteLine($"[LOGIN][ERRO] Credenciais inválidas para o email '{email}'.");
                 return false;
             }
 
-            // Validar senha
-            if (usuario.Senha != senha)
+            var usuario = await _usuarioService.ObterPorEmailAsync(email);
+            if (usuario == null)
             {
-                System.Diagnostics.Debug.WriteLine($"Senha inválida para email: {email}");
+                Console.WriteLine($"[LOGIN][ERRO] Usuário não encontrado após validação para o email '{email}'.");
                 return false;
             }
 
@@ -47,13 +48,13 @@ public class SessionService : ISessionService
             // Atualizar último login
             await _usuarioService.AtualizarUltimoLoginAsync(_usuarioLogado.Id);
 
-            System.Diagnostics.Debug.WriteLine($"Login bem-sucedido para usuário: {_usuarioLogado.Nome} (ID: {_usuarioLogado.Id})");
+            Console.WriteLine($"[LOGIN] Login bem-sucedido para usuário: {_usuarioLogado.Nome} (ID: {_usuarioLogado.Id}).");
             return true;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Erro ao fazer login: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            Console.WriteLine($"[LOGIN][EXCEÇÃO] Erro ao fazer login: {ex.Message}");
+            Console.WriteLine($"[LOGIN][EXCEÇÃO] Stack trace: {ex.StackTrace}");
             return false;
         }
     }

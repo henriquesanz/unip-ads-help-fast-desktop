@@ -9,9 +9,6 @@ public class Chat
     public int? ChamadoId { get; set; }
     public Chamado? Chamado { get; set; }
 
-    public int? ChamadoId1 { get; set; }
-    public Chamado? Chamado1 { get; set; }
-
     public int RemetenteId { get; set; }
     public Usuario? Remetente { get; set; }
 

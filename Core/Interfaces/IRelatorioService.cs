@@ -28,10 +28,18 @@ public interface IRelatorioService
     Task ProcessarRelatoriosAgendadosAsync();
     Task AgendarRelatorioAsync(Relatorio relatorio);
 
-    // Exportação
+    // Relatórios consolidados
+    Task<RelatorioSistemaDto> GerarRelatorioSistemaAsync(DateTime? dataInicio = null, DateTime? dataFim = null);
+    Task<byte[]> ExportarRelatorioSistemaAsync(RelatorioSistemaDto relatorio, RelatorioFormatoExportacao formato);
 }
 
 // DTOs para relatórios
+public enum RelatorioFormatoExportacao
+{
+    Pdf,
+    Excel
+}
+
 public class RelatorioPerformance
 {
     public DateTime DataInicio { get; set; }
@@ -250,4 +258,102 @@ public class GraficoData
     public string Titulo { get; set; } = string.Empty;
     public List<object> Dados { get; set; } = new();
     public Dictionary<string, object> Configuracoes { get; set; } = new();
+}
+
+public class RelatorioSistemaDto
+{
+    public DateTime GeradoEm { get; set; }
+    public DateTime? PeriodoInicio { get; set; }
+    public DateTime? PeriodoFim { get; set; }
+    public RelatorioSistemaResumoDto Resumo { get; set; } = new();
+    public List<CargoRelatorioDto> Cargos { get; set; } = new();
+    public List<UsuarioRelatorioDto> Usuarios { get; set; } = new();
+    public List<ChamadoRelatorioDto> Chamados { get; set; } = new();
+    public List<ChatRelatorioDto> Chats { get; set; } = new();
+    public List<ChatIaRelatorioDto> ChatIaResults { get; set; } = new();
+    public List<HistoricoChamadoRelatorioDto> HistoricosChamados { get; set; } = new();
+    public List<FaqRelatorioDto> Faqs { get; set; } = new();
+}
+
+public class RelatorioSistemaResumoDto
+{
+    public int TotalCargos { get; set; }
+    public int TotalUsuarios { get; set; }
+    public int TotalChamados { get; set; }
+    public int ChamadosAbertos { get; set; }
+    public int ChamadosEmAndamento { get; set; }
+    public int ChamadosResolvidos { get; set; }
+    public int ChamadosFechados { get; set; }
+    public int TotalChats { get; set; }
+    public int TotalChatIaResultados { get; set; }
+    public int TotalHistoricoChamados { get; set; }
+    public int TotalFaqs { get; set; }
+    public int FaqsAtivas { get; set; }
+    public int FaqsInativas { get; set; }
+}
+
+public class CargoRelatorioDto
+{
+    public int Id { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public int TotalUsuarios { get; set; }
+}
+
+public class UsuarioRelatorioDto
+{
+    public int Id { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string CargoNome { get; set; } = string.Empty;
+    public string? Telefone { get; set; }
+    public DateTime? UltimoLogin { get; set; }
+    public int ChamadosTotais { get; set; }
+    public int ChamadosEmAberto { get; set; }
+    public int ChamadosResolvidos { get; set; }
+}
+
+public class ChamadoRelatorioDto
+{
+    public int Id { get; set; }
+    public string Motivo { get; set; } = string.Empty;
+    public string ClienteNome { get; set; } = string.Empty;
+    public string? TecnicoNome { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public DateTime DataAbertura { get; set; }
+    public DateTime? DataFechamento { get; set; }
+}
+
+public class ChatRelatorioDto
+{
+    public int Id { get; set; }
+    public int? ChamadoId { get; set; }
+    public string RemetenteNome { get; set; } = string.Empty;
+    public string? DestinatarioNome { get; set; }
+    public string? Tipo { get; set; }
+    public DateTime DataEnvio { get; set; }
+    public string Mensagem { get; set; } = string.Empty;
+}
+
+public class ChatIaRelatorioDto
+{
+    public int Id { get; set; }
+    public int ChatId { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string Resumo { get; set; } = string.Empty;
+}
+
+public class HistoricoChamadoRelatorioDto
+{
+    public int Id { get; set; }
+    public int ChamadoId { get; set; }
+    public string Acao { get; set; } = string.Empty;
+    public string UsuarioNome { get; set; } = string.Empty;
+    public DateTime Data { get; set; }
+}
+
+public class FaqRelatorioDto
+{
+    public int Id { get; set; }
+    public string Pergunta { get; set; } = string.Empty;
+    public bool Ativo { get; set; }
 }

@@ -4,6 +4,7 @@ using HelpFastDesktop.Core.Models;
 using HelpFastDesktop.Presentation.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows.Input;
+using System.Linq;
 
 namespace HelpFastDesktop.Presentation.Controllers;
 
@@ -42,6 +43,9 @@ public class DashboardController : BaseController
 
     private void ConfigureSections()
     {
+        _model.Sections.Clear();
+        _model.AllActions.Clear();
+
         var usuario = _sessionService.UsuarioLogado;
         if (usuario == null) return;
 
@@ -57,6 +61,8 @@ public class DashboardController : BaseController
                 ConfigureAdministradorSections();
                 break;
         }
+
+        UpdateLayoutConfiguration();
     }
 
     private void ConfigureClienteSections()
@@ -105,24 +111,8 @@ public class DashboardController : BaseController
             }
         };
 
-        var notificacoesSection = new DashboardSection
-        {
-            Title = "🔔 Notificações",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
-                new DashboardAction
-                {
-                    Title = "NOTIFICAÇÕES",
-                    Description = "Visualizar notificações recebidas",
-                    Color = "#E91E63",
-                    Command = new RelayCommand(() => NavigateToForm("Notificacoes"))
-                }
-            }
-        };
-
         _model.Sections.Add(chamadosSection);
         _model.Sections.Add(suporteSection);
-        _model.Sections.Add(notificacoesSection);
     }
 
     private void ConfigureTecnicoSections()
@@ -164,24 +154,8 @@ public class DashboardController : BaseController
             }
         };
 
-        var notificacoesSection = new DashboardSection
-        {
-            Title = "🔔 Notificações",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
-                new DashboardAction
-                {
-                    Title = "NOTIFICAÇÕES",
-                    Description = "Visualizar notificações do técnico",
-                    Color = "#E91E63",
-                    Command = new RelayCommand(() => NavigateToForm("Notificacoes"))
-                }
-            }
-        };
-
         _model.Sections.Add(chamadosSection);
         _model.Sections.Add(relatoriosSection);
-        _model.Sections.Add(notificacoesSection);
     }
 
     private void ConfigureAdministradorSections()
@@ -233,13 +207,6 @@ public class DashboardController : BaseController
                     Description = "Criar novos usuários",
                     Color = "#4CAF50",
                     Command = new RelayCommand(() => NavigateToForm("CadastrarUsuario"))
-                },
-                new DashboardAction
-                {
-                    Title = "ALTERAR PERMISSÕES",
-                    Description = "Configurar permissões e hierarquia",
-                    Color = "#9C27B0",
-                    Command = new RelayCommand(() => NavigateToForm("Permissoes"))
                 }
             }
         };
@@ -255,71 +222,6 @@ public class DashboardController : BaseController
                     Description = "Relatórios e métricas do sistema",
                     Color = "#6432A0",
                     Command = new RelayCommand(() => NavigateToForm("Relatorios"))
-                },
-                new DashboardAction
-                {
-                    Title = "MÉTRICAS DE PERFORMANCE",
-                    Description = "Análise de performance por técnico",
-                    Color = "#FF9800",
-                    Command = new RelayCommand(() => NavigateToForm("Metricas"))
-                },
-                new DashboardAction
-                {
-                    Title = "ANÁLISE DE SATISFAÇÃO",
-                    Description = "Relatórios de satisfação do cliente",
-                    Color = "#2196F3",
-                    Command = new RelayCommand(() => NavigateToForm("Satisfacao"))
-                }
-            }
-        };
-
-        var configuracoesSection = new DashboardSection
-        {
-            Title = "⚙️ Configurações do Sistema",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
-                new DashboardAction
-                {
-                    Title = "CONFIGURAÇÕES",
-                    Description = "Configurações gerais do sistema",
-                    Color = "#607D8B",
-                    Command = new RelayCommand(() => NavigateToForm("Configuracoes"))
-                },
-                new DashboardAction
-                {
-                    Title = "LOGS DE AUDITORIA",
-                    Description = "Visualizar logs de auditoria",
-                    Color = "#795548",
-                    Command = new RelayCommand(() => NavigateToForm("Auditoria"))
-                },
-                new DashboardAction
-                {
-                    Title = "BACKUP E RESTAURAÇÃO",
-                    Description = "Gerenciar backup do sistema",
-                    Color = "#9E9E9E",
-                    Command = new RelayCommand(() => NavigateToForm("Backup"))
-                }
-            }
-        };
-
-        var notificacoesSection = new DashboardSection
-        {
-            Title = "🔔 Notificações e Comunicação",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
-                new DashboardAction
-                {
-                    Title = "NOTIFICAÇÕES",
-                    Description = "Visualizar notificações do sistema",
-                    Color = "#E91E63",
-                    Command = new RelayCommand(() => NavigateToForm("Notificacoes"))
-                },
-                new DashboardAction
-                {
-                    Title = "CONFIGURAR NOTIFICAÇÕES",
-                    Description = "Configurar tipos de notificação",
-                    Color = "#F44336",
-                    Command = new RelayCommand(() => NavigateToForm("ConfigNotificacoes"))
                 }
             }
         };
@@ -327,13 +229,40 @@ public class DashboardController : BaseController
         _model.Sections.Add(chamadosSection);
         _model.Sections.Add(usuariosSection);
         _model.Sections.Add(relatoriosSection);
-        _model.Sections.Add(configuracoesSection);
-        _model.Sections.Add(notificacoesSection);
     }
 
     private void NavigateToForm(string formName)
     {
         OnNavigateToFormRequested?.Invoke(formName);
+    }
+
+    private void UpdateLayoutConfiguration()
+    {
+        _model.AllActions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>(_model.Sections.SelectMany(section => section.Actions));
+
+        var totalActions = _model.AllActions.Count;
+        
+        int columns;
+        if (totalActions <= 5)
+        {
+            columns = 1;
+        }
+        else if (totalActions <= 12)
+        {
+            columns = 2;
+        }
+        else
+        {
+            columns = 3;
+        }
+
+        _model.ActionColumns = columns;
+        _model.ActionsContainerWidth = columns switch
+        {
+            1 => 320,
+            2 => 640,
+            _ => 960
+        };
     }
 
     public void Logout()

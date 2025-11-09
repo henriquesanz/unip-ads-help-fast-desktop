@@ -8,7 +8,8 @@
         ResizeMode="CanResize"
         MinWidth="800"
         MinHeight="500"
-        Background="#1D2935">
+        Background="#161D28"
+        WindowState="Maximized">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -18,14 +19,11 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#C85000" Height="80">
-            <Grid Margin="20,10">
-                <TextBlock Text="Gerenciar Usuários" 
-                           FontSize="18" 
-                           FontWeight="Bold" 
-                           Foreground="White"
-                           VerticalAlignment="Center"/>
-            </Grid>
+        <Border Grid.Row="0" Background="#161D28" Height="100" Padding="0,20">
+            <Image Source="pack://application:,,,/Assets/Images/logo.png"
+                   Height="60"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
         </Border>
 
         <!-- Content -->
@@ -36,6 +34,7 @@
                       IsReadOnly="True"
                       GridLinesVisibility="All"
                       HeadersVisibility="Column"
+                      ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}"
                       Background="#464649"
                       Foreground="White"
                       BorderBrush="#505053"
@@ -59,70 +58,31 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right" 
                     Margin="20">
+            <Button Content="EDITAR"
+                    Click="EditarButton_Click"
+                    IsEnabled="{Binding UsuarioSelecionado, Converter={StaticResource NullToBooleanConverter}}"
+                    Width="120"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource ActionButtonStyle}"/>
+
+            <Button Content="EXCLUIR"
+                    Click="ExcluirButton_Click"
+                    IsEnabled="{Binding UsuarioSelecionado, Converter={StaticResource NullToBooleanConverter}}"
+                    Width="120"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource ActionButtonStyle}"/>
+
             <Button Content="ATUALIZAR"
                     Click="AtualizarButton_Click"
                     IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
-                    Height="35"
                     Width="120"
-                    Background="#C85000"
-                    Foreground="White"
-                    BorderThickness="0"
-                    FontSize="10"
-                    FontWeight="Bold"
                     Margin="0,0,10,0"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="3">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#B04500"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Style="{StaticResource ActionButtonStyle}"/>
 
             <Button Content="FECHAR"
                     Click="FecharButton_Click"
-                    Height="35"
                     Width="100"
-                    Background="#505053"
-                    Foreground="#C8C8C8"
-                    BorderThickness="0"
-                    FontSize="10"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="3">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#606063"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Style="{StaticResource ActionButtonStyle}"/>
         </StackPanel>
     </Grid>
 </Window>

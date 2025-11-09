@@ -103,11 +103,6 @@ public class ApplicationDbContext : DbContext
                   .HasForeignKey(e => e.ChamadoId)
                   .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasOne(e => e.Chamado1)
-                  .WithMany()
-                  .HasForeignKey(e => e.ChamadoId1)
-                  .OnDelete(DeleteBehavior.Restrict);
-
             entity.HasOne(e => e.Remetente)
                   .WithMany()
                   .HasForeignKey(e => e.RemetenteId)

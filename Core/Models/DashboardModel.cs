@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -10,6 +11,9 @@ public class DashboardModel : INotifyPropertyChanged
     private string _tipoUsuario = string.Empty;
     private string _descricaoTipoUsuario = string.Empty;
     private ObservableCollection<DashboardSection> _sections = new();
+    private ObservableCollection<DashboardAction> _allActions = new();
+    private int _actionColumns = 1;
+    private double _actionsContainerWidth = 360;
 
     public string NomeUsuario
     {
@@ -47,6 +51,38 @@ public class DashboardModel : INotifyPropertyChanged
         set
         {
             _sections = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public ObservableCollection<DashboardAction> AllActions
+    {
+        get => _allActions;
+        set
+        {
+            _allActions = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int ActionColumns
+    {
+        get => _actionColumns;
+        set
+        {
+            if (_actionColumns == value) return;
+            _actionColumns = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public double ActionsContainerWidth
+    {
+        get => _actionsContainerWidth;
+        set
+        {
+            if (Math.Abs(_actionsContainerWidth - value) < 0.1) return;
+            _actionsContainerWidth = value;
             OnPropertyChanged();
         }
     }

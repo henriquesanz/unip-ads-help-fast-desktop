@@ -1,8 +1,11 @@
+using System;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using HelpFastDesktop.Infrastructure.Data;
 using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
+using HelpFastDesktop.Core.Security;
 
 namespace HelpFastDesktop.Core.Services;
 
@@ -18,14 +21,29 @@ public class UsuarioService : IUsuarioService
     public async Task<Usuario?> ObterPorEmailAsync(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
+        {
+            Console.WriteLine("[USUARIO][ERRO] Email vazio ao buscar usuário.");
             return null;
+        }
 
         var emailNormalizado = email.Trim().ToLower();
+        Console.WriteLine($"[USUARIO] Buscando usuário por email normalizado: '{emailNormalizado}'.");
         
         // Busca case-insensitive do email - EF Core traduz ToLower() para LOWER() no SQL Server
-        return await _context.Usuarios
+        var usuario = await _context.Usuarios
             .Include(u => u.Cargo)
             .FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
+
+        if (usuario == null)
+        {
+            Console.WriteLine("[USUARIO] Nenhum usuário encontrado para o email informado.");
+        }
+        else
+        {
+            Console.WriteLine($"[USUARIO] Usuário localizado. ID: {usuario.Id}, Nome: {usuario.Nome}, Cargo: {usuario.Cargo?.Nome ?? "Sem cargo"}.");
+        }
+
+        return usuario;
     }
 
     public async Task<Usuario?> ObterPorIdAsync(int id)
@@ -50,8 +68,10 @@ public class UsuarioService : IUsuarioService
         if (string.IsNullOrWhiteSpace(usuario.Senha))
             throw new ArgumentException("Senha é obrigatória", nameof(usuario));
 
-        // Hash da senha será implementado em produção
-        // usuario.Senha = BCrypt.Net.BCrypt.HashPassword(usuario.Senha);
+        if (!PasswordHasher.IsHashed(usuario.Senha))
+        {
+            usuario.Senha = PasswordHasher.Hash(usuario.Senha);
+        }
         
         try
         {
@@ -71,9 +91,13 @@ public class UsuarioService : IUsuarioService
 
     public async Task<Usuario> AtualizarUsuarioAsync(Usuario usuario)
     {
-        // Hash da senha será implementado em produção se senha foi alterada
-        // if (senhaFoiAlterada)
-        //     usuario.Senha = BCrypt.Net.BCrypt.HashPassword(usuario.Senha);
+        if (usuario == null)
+            throw new ArgumentNullException(nameof(usuario));
+
+        if (!PasswordHasher.IsHashed(usuario.Senha))
+        {
+            usuario.Senha = PasswordHasher.Hash(usuario.Senha);
+        }
         
         _context.Usuarios.Update(usuario);
         await _context.SaveChangesAsync();
@@ -96,13 +120,40 @@ public class UsuarioService : IUsuarioService
                 return false;
             }
 
-            // Verificação de hash da senha será implementada em produção
-            // return BCrypt.Net.BCrypt.Verify(senha, usuario.Senha);
-            
-            // Por enquanto, comparação simples (apenas para desenvolvimento)
-            // Comparação case-sensitive da senha
-            var senhaValida = usuario.Senha == senha;
-            
+            var senhaValida = PasswordHasher.Verify(senha, usuario.Senha);
+
+            if (!senhaValida && usuario.Senha == senha)
+            {
+                senhaValida = true;
+
+                try
+                {
+                    usuario.Senha = PasswordHasher.Hash(senha);
+                    await _context.SaveChangesAsync();
+                    System.Diagnostics.Debug.WriteLine($"Senha em texto plano migrada para hash para o usuário ID {usuario.Id}.");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Erro ao atualizar hash da senha para o usuário ID {usuario.Id}: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+                }
+            }
+
+            if (senhaValida && !PasswordHasher.IsCurrentFormat(usuario.Senha))
+            {
+                try
+                {
+                    usuario.Senha = PasswordHasher.Hash(senha);
+                    await _context.SaveChangesAsync();
+                    System.Diagnostics.Debug.WriteLine($"Senha do usuário ID {usuario.Id} migrada para o formato de hash atual.");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Erro ao migrar hash da senha para o usuário ID {usuario.Id}: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+                }
+            }
+
             if (!senhaValida)
             {
                 System.Diagnostics.Debug.WriteLine($"Senha inválida para email: {email}");
@@ -121,12 +172,10 @@ public class UsuarioService : IUsuarioService
 
     public async Task AtualizarUltimoLoginAsync(int usuarioId)
     {
-        var usuario = await _context.Usuarios.FindAsync(usuarioId);
-        if (usuario != null)
-        {
-            usuario.UltimoLogin = DateTime.Now;
-            await _context.SaveChangesAsync();
-        }
+        await _context.Usuarios
+            .Where(u => u.Id == usuarioId)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(u => u.UltimoLogin, _ => DateTime.Now));
     }
 
     public async Task<bool> EmailExisteAsync(string email)
@@ -299,6 +348,28 @@ public class UsuarioService : IUsuarioService
     }
 
     // Validações de permissão
+    public async Task RemoverUsuarioAsync(int usuarioId)
+    {
+        var usuario = await _context.Usuarios.FindAsync(usuarioId);
+
+        if (usuario == null)
+        {
+            throw new InvalidOperationException("Usuário não encontrado.");
+        }
+
+        _context.Usuarios.Remove(usuario);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Erro ao remover usuário ID {usuarioId}: {ex.Message}");
+            throw new InvalidOperationException("Não foi possível excluir o usuário. Verifique se existem registros associados a ele.", ex);
+        }
+    }
+
     public async Task<bool> PodeCriarUsuarioAsync(int usuarioId, UserRole tipoUsuarioParaCriar)
     {
         var usuario = await ObterPorIdAsync(usuarioId);

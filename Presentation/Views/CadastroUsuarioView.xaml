@@ -8,7 +8,8 @@
         ResizeMode="CanResize"
         MinWidth="450"
         MinHeight="550"
-        Background="#1D2935">
+        Background="#161D28"
+        WindowState="Maximized">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -17,14 +18,13 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock Grid.Row="0" 
-                   Text="{Binding TituloFormulario}"
-                   FontSize="16" 
-                   FontWeight="Bold" 
-                   Foreground="White"
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#161D28" Height="100" Padding="0,20">
+            <Image Source="pack://application:,,,/Assets/Images/logo.png"
+                   Height="60"
                    HorizontalAlignment="Center"
-                   Margin="30,20"/>
+                   VerticalAlignment="Center"/>
+        </Border>
 
         <!-- Form Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="30,0">
@@ -142,70 +142,14 @@
             <Button Content="{Binding TextoBotaoSalvar}"
                     Click="SalvarButton_Click"
                     IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
-                    Height="40"
                     Width="150"
-                    Background="#0078D7"
-                    Foreground="White"
-                    BorderThickness="0"
-                    FontSize="11"
-                    FontWeight="Bold"
                     Margin="0,0,10,0"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="3">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#106EBE"/>
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter Property="Background" Value="#005A9E"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Style="{StaticResource ActionButtonStyle}"/>
 
             <Button Content="CANCELAR"
                     Click="CancelarButton_Click"
-                    Height="40"
                     Width="120"
-                    Background="#505053"
-                    Foreground="#C8C8C8"
-                    BorderThickness="0"
-                    FontSize="11"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="3">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#606063"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Style="{StaticResource ActionButtonStyle}"/>
 
         </StackPanel>
     </Grid>

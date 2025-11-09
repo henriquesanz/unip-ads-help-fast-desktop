@@ -11,6 +11,7 @@ public interface IUsuarioService
     Task<bool> ValidarLoginAsync(string email, string senha);
     Task AtualizarUltimoLoginAsync(int usuarioId);
     Task<bool> EmailExisteAsync(string email);
+    Task RemoverUsuarioAsync(int usuarioId);
     
     // Métodos específicos por tipo de usuário
     Task<Usuario> CriarClienteAsync(Usuario cliente);

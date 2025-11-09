@@ -48,10 +48,31 @@ public class GerenciarUsuariosController : BaseController
     public void SelecionarUsuario(Usuario usuario)
     {
         _model.UsuarioSelecionado = usuario;
-        OnUsuarioSelecionado?.Invoke(usuario);
     }
 
-    public event Action<Usuario>? OnUsuarioSelecionado;
+    public async System.Threading.Tasks.Task<bool> ExcluirUsuarioSelecionadoAsync()
+    {
+        if (_model.UsuarioSelecionado == null)
+        {
+            _model.ErrorMessage = "Selecione um usuário para excluir.";
+            return false;
+        }
+
+        try
+        {
+            await _usuarioService.RemoverUsuarioAsync(_model.UsuarioSelecionado.Id);
+            await CarregarUsuariosAsync();
+            _model.UsuarioSelecionado = null;
+            _model.ErrorMessage = string.Empty;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _model.ErrorMessage = $"Erro ao excluir usuário: {ex.Message}";
+            return false;
+        }
+    }
+
 }
 
 public class GerenciarUsuariosModel : INotifyPropertyChanged

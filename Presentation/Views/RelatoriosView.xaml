@@ -8,7 +8,8 @@
         ResizeMode="CanResize"
         MinWidth="600"
         MinHeight="400"
-        Background="#1D2935">
+        Background="#161D28"
+        WindowState="Maximized">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -18,95 +19,386 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#6432A0" Height="80">
-            <Grid Margin="20,10">
-                <TextBlock Text="Relatórios Executivos" 
-                           FontSize="18" 
-                           FontWeight="Bold" 
-                           Foreground="White"
-                           VerticalAlignment="Center"/>
-            </Grid>
+        <Border Grid.Row="0" Background="#161D28" Height="100" Padding="0,20">
+            <Image Source="pack://application:,,,/Assets/Images/logo.png"
+                   Height="60"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
         </Border>
 
         <!-- Content -->
-        <Grid Grid.Row="1" Margin="30">
-            <TextBlock Text="{Binding Mensagem}" 
-                       Foreground="White"
-                       FontSize="12"
-                       TextWrapping="Wrap"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"/>
+        <ScrollViewer Grid.Row="1"
+                      Margin="30"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Filtros e ações -->
+                <Border Grid.Row="0" Background="#1F2937" Padding="20" CornerRadius="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Período:"
+                                   VerticalAlignment="Center"
+                                   Foreground="#E5E7EB"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"/>
+
+                        <DatePicker Grid.Column="1"
+                                    Margin="10,0"
+                                    SelectedDate="{Binding DataInicio}"
+                                    DisplayDateEnd="{Binding DataFim}"
+                                    Background="White"
+                                    Width="160"/>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="a"
+                                   VerticalAlignment="Center"
+                                   Foreground="#E5E7EB"
+                                   FontSize="14"
+                                   Margin="5,0"/>
+
+                        <DatePicker Grid.Column="3"
+                                    SelectedDate="{Binding DataFim}"
+                                    DisplayDateStart="{Binding DataInicio}"
+                                    Background="White"
+                                    Width="160"/>
+
+                        <StackPanel Grid.Column="4"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Margin="20,0,0,0">
+                            <Button Content="{Binding IsLoading, Converter={StaticResource LoadingToTextConverter}, ConverterParameter=GERAR|GERANDO}"
+                                    Click="AtualizarButton_Click"
+                                    IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
+                                    Width="140"
+                                    Margin="0,0,10,0"
+                                    Style="{StaticResource ActionButtonStyle}"/>
+
+                            <Button Content="EXPORTAR PDF"
+                                    Click="ExportarPdfButton_Click"
+                                    IsEnabled="{Binding PodeExportar}"
+                                    Width="140"
+                                    Margin="0,0,10,0"
+                                    Style="{StaticResource ActionButtonStyle}"/>
+
+                            <Button Content="EXPORTAR EXCEL"
+                                    Click="ExportarExcelButton_Click"
+                                    IsEnabled="{Binding PodeExportar}"
+                                    Width="150"
+                                    Style="{StaticResource ActionButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Mensagem -->
+                <TextBlock Grid.Row="1"
+                           Text="{Binding Mensagem}"
+                           Foreground="#9CA3AF"
+                           FontSize="12"
+                           Margin="0,15,0,0"/>
+
+                <!-- Resumo -->
+                <UniformGrid Grid.Row="2"
+                             Columns="4"
+                             Margin="0,20,0,20"
+                             DataContext="{Binding Resumo}"
+                             Visibility="{Binding PossuiDados, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Total de cargos" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding TotalCargos, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Total de usuários" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding TotalUsuarios, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Total de chamados" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding TotalChamados, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Chamados abertos" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding ChamadosAbertos, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Chamados em andamento" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding ChamadosEmAndamento, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Chamados resolvidos" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding ChamadosResolvidos, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Chamados fechados" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding ChamadosFechados, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Mensagens de chat" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding TotalChats, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Respostas da IA" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding TotalChatIaResultados, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Eventos de histórico" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding TotalHistoricoChamados, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="FAQs ativas" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding FaqsAtivas, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="6" Padding="12" Background="#1F2937" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="FAQs inativas" Foreground="#9CA3AF" FontSize="12"/>
+                            <TextBlock Text="{Binding FaqsInativas, TargetNullValue='-'}" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Tabelas -->
+                <TabControl Grid.Row="3"
+                            Background="#111827"
+                            BorderThickness="0"
+                            Margin="0,0,0,10"
+                            Visibility="{Binding PossuiDados, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TabItem Header="Cargos">
+                    <DataGrid ItemsSource="{Binding Cargos}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              Margin="0"
+                              Background="#111827"
+                              Foreground="White"
+                              RowBackground="#1F2937"
+                              AlternatingRowBackground="#27303E"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="80"/>
+                            <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="*"/>
+                            <DataGridTextColumn Header="Total de usuários" Binding="{Binding TotalUsuarios}" Width="150"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Usuários">
+                    <DataGrid ItemsSource="{Binding Usuarios}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              Background="#111827"
+                              Foreground="White"
+                              RowBackground="#1F2937"
+                              AlternatingRowBackground="#27303E"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
+                            <DataGridTextColumn Header="Nome" Binding="{Binding Nome}" Width="180"/>
+                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200"/>
+                            <DataGridTextColumn Header="Cargo" Binding="{Binding CargoNome}" Width="150"/>
+                            <DataGridTextColumn Header="Telefone" Binding="{Binding Telefone}" Width="120"/>
+                            <DataGridTextColumn Header="Último login" Binding="{Binding UltimoLogin, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="160"/>
+                            <DataGridTextColumn Header="Chamados totais" Binding="{Binding ChamadosTotais}" Width="130"/>
+                            <DataGridTextColumn Header="Em aberto" Binding="{Binding ChamadosEmAberto}" Width="120"/>
+                            <DataGridTextColumn Header="Resolvidos" Binding="{Binding ChamadosResolvidos}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Chamados">
+                    <DataGrid ItemsSource="{Binding Chamados}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              Background="#111827"
+                              Foreground="White"
+                              RowBackground="#1F2937"
+                              AlternatingRowBackground="#27303E"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
+                            <DataGridTextColumn Header="Cliente" Binding="{Binding ClienteNome}" Width="180"/>
+                            <DataGridTextColumn Header="Técnico" Binding="{Binding TecnicoNome}" Width="180"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="110"/>
+                            <DataGridTextColumn Header="Abertura" Binding="{Binding DataAbertura, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="160"/>
+                            <DataGridTextColumn Header="Fechamento" Binding="{Binding DataFechamento, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="160"/>
+                            <DataGridTextColumn Header="Motivo" Binding="{Binding Motivo}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Chats">
+                    <DataGrid ItemsSource="{Binding Chats}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              Background="#111827"
+                              Foreground="White"
+                              RowBackground="#1F2937"
+                              AlternatingRowBackground="#27303E"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
+                            <DataGridTextColumn Header="Chamado" Binding="{Binding ChamadoId}" Width="90"/>
+                            <DataGridTextColumn Header="Remetente" Binding="{Binding RemetenteNome}" Width="180"/>
+                            <DataGridTextColumn Header="Destinatário" Binding="{Binding DestinatarioNome}" Width="180"/>
+                            <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="120"/>
+                            <DataGridTextColumn Header="Data" Binding="{Binding DataEnvio, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="160"/>
+                            <DataGridTextColumn Header="Mensagem" Binding="{Binding Mensagem}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Resultados IA">
+                    <DataGrid ItemsSource="{Binding ChatIaResults}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              Background="#111827"
+                              Foreground="White"
+                              RowBackground="#1F2937"
+                              AlternatingRowBackground="#27303E"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
+                            <DataGridTextColumn Header="Chat" Binding="{Binding ChatId}" Width="90"/>
+                            <DataGridTextColumn Header="Criado em" Binding="{Binding CreatedAt, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="160"/>
+                            <DataGridTextColumn Header="Resumo" Binding="{Binding Resumo}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Histórico">
+                    <DataGrid ItemsSource="{Binding HistoricosChamados}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              Background="#111827"
+                              Foreground="White"
+                              RowBackground="#1F2937"
+                              AlternatingRowBackground="#27303E"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
+                            <DataGridTextColumn Header="Chamado" Binding="{Binding ChamadoId}" Width="90"/>
+                            <DataGridTextColumn Header="Ação" Binding="{Binding Acao}" Width="200"/>
+                            <DataGridTextColumn Header="Usuário" Binding="{Binding UsuarioNome}" Width="180"/>
+                            <DataGridTextColumn Header="Data" Binding="{Binding Data, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="160"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="FAQs">
+                    <DataGrid ItemsSource="{Binding Faqs}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              Background="#111827"
+                              Foreground="White"
+                              RowBackground="#1F2937"
+                              AlternatingRowBackground="#27303E"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              ColumnHeaderStyle="{StaticResource DataGridHeaderStyle}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
+                            <DataGridTextColumn Header="Pergunta" Binding="{Binding Pergunta}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridCheckBoxColumn Header="Ativa" Binding="{Binding Ativo}" Width="100" IsThreeState="False"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+            </TabControl>
         </Grid>
+        </ScrollViewer>
 
         <!-- Footer -->
         <StackPanel Grid.Row="2" 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right" 
                     Margin="20">
-            <Button Content="ATUALIZAR"
-                    Click="AtualizarButton_Click"
-                    IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
-                    Height="35"
-                    Width="120"
-                    Background="#6432A0"
-                    Foreground="White"
-                    BorderThickness="0"
-                    FontSize="10"
-                    FontWeight="Bold"
-                    Margin="0,0,10,0"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="3">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#5125A0"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
-
             <Button Content="FECHAR"
                     Click="FecharButton_Click"
-                    Height="35"
-                    Width="100"
-                    Background="#505053"
-                    Foreground="#C8C8C8"
-                    BorderThickness="0"
-                    FontSize="10"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="3">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#606063"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Width="120"
+                    Style="{StaticResource ActionButtonStyle}"/>
         </StackPanel>
     </Grid>
 </Window>

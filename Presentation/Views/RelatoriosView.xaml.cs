@@ -1,3 +1,4 @@
+using HelpFastDesktop.Core.Interfaces;
 using HelpFastDesktop.Presentation.Controllers;
 using System.Windows;
 
@@ -29,6 +30,16 @@ public partial class RelatoriosView : Window
     private void FecharButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private async void ExportarPdfButton_Click(object sender, RoutedEventArgs e)
+    {
+        await _controller.ExportarRelatorioAsync(RelatorioFormatoExportacao.Pdf);
+    }
+
+    private async void ExportarExcelButton_Click(object sender, RoutedEventArgs e)
+    {
+        await _controller.ExportarRelatorioAsync(RelatorioFormatoExportacao.Excel);
     }
 }
 

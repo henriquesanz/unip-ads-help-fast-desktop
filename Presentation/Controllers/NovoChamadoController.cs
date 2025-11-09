@@ -1,7 +1,7 @@
 using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.ObjectModel;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -24,6 +24,11 @@ public class NovoChamadoController : BaseController
 
     public NovoChamadoModel GetModel() => _model;
 
+    public void SetAssunto(string assunto)
+    {
+        _model.Assunto = assunto;
+    }
+
     public void SetMotivo(string motivo)
     {
         _model.Motivo = motivo;
@@ -31,6 +36,18 @@ public class NovoChamadoController : BaseController
 
     public async System.Threading.Tasks.Task CriarChamadoAsync()
     {
+        if (string.IsNullOrWhiteSpace(_model.Assunto))
+        {
+            _model.ErrorMessage = "O assunto do chamado é obrigatório.";
+            return;
+        }
+
+        if (_model.Assunto.Length < 3)
+        {
+            _model.ErrorMessage = "O assunto deve ter pelo menos 3 caracteres.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_model.Motivo))
         {
             _model.ErrorMessage = "O motivo do chamado é obrigatório.";
@@ -57,7 +74,7 @@ public class NovoChamadoController : BaseController
 
             var chamado = new Chamado
             {
-                Motivo = _model.Motivo.Trim(),
+                Motivo = $"{_model.Assunto.Trim()}{Environment.NewLine}{_model.Motivo.Trim()}",
                 ClienteId = usuario.Id,
                 Status = "Aberto",
                 DataAbertura = DateTime.Now
@@ -91,9 +108,20 @@ public class NovoChamadoController : BaseController
 
 public class NovoChamadoModel : INotifyPropertyChanged
 {
+    private string _assunto = string.Empty;
     private string _motivo = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _isLoading = false;
+
+    public string Assunto
+    {
+        get => _assunto;
+        set
+        {
+            _assunto = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string Motivo
     {

@@ -1,20 +1,29 @@
-using Microsoft.EntityFrameworkCore;
-using HelpFastDesktop.Infrastructure.Data;
 using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Models.Entities.JavaApi;
 using HelpFastDesktop.Core.Interfaces;
+using HelpFastDesktop.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
 
 namespace HelpFastDesktop.Core.Services;
 
 public class AIService : IAIService
 {
-    private readonly IJavaApiClient _javaApiClient;
     private readonly ApplicationDbContext _context;
+    private readonly IGoogleDriveService _googleDriveService;
+    private readonly IOpenAIService _openAIService;
+    private readonly SemaphoreSlim _systemPromptLock = new(1, 1);
+    private string? _cachedSystemPrompt;
+    private const string ProcedimentosFileId = "11QDEi5sSNZb99EPmL5HZqe0-ASecHgWO4yXZC4Cl1FU";
 
-    public AIService(IJavaApiClient javaApiClient, ApplicationDbContext context)
+    public AIService(ApplicationDbContext context, IGoogleDriveService googleDriveService, IOpenAIService openAIService)
     {
-        _javaApiClient = javaApiClient;
         _context = context;
+        _googleDriveService = googleDriveService;
+        _openAIService = openAIService;
     }
 
     #region Chat Inteligente
@@ -26,20 +35,30 @@ public class AIService : IAIService
             // Buscar contexto do usuário
             var contexto = await ConstruirContextoUsuarioAsync(usuarioId);
 
-            // Enviar para API Java
-            var response = await _javaApiClient.EnviarMensagemChatAsync(usuarioId, mensagem, contexto);
+            var systemPrompt = await ObterSystemPromptAsync(contexto);
+            var respostaTexto = await _openAIService.EnviarPerguntaAsync(mensagem, systemPrompt);
 
-            // Salvar interação no banco
-            await SalvarInteracaoIAAsync(usuarioId, "Chat", mensagem, response?.Resposta, response?.Categoria);
+            var response = new ChatResponse
+            {
+                Resposta = respostaTexto,
+                EscalarParaHumano = false
+            };
+
+            await SalvarInteracaoIAAsync(usuarioId, "Chat", mensagem, response.Resposta, response.Categoria);
 
             return response;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erro ao processar mensagem de chat para usuário {usuarioId}: {ex.Message}");
-            return new ChatResponse 
-            { 
-                Resposta = "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente mais tarde.",
+            Console.WriteLine($"Erro ao processar mensagem com OpenAI para usuário {usuarioId}: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Erro interno: {ex.InnerException.Message}");
+            }
+
+            return new ChatResponse
+            {
+                Resposta = "Desculpe, ocorreu um erro ao processar sua mensagem com o serviço de IA. Tente novamente mais tarde.",
                 EscalarParaHumano = true
             };
         }
@@ -72,19 +91,45 @@ public class AIService : IAIService
                 return new CategorizacaoResponse();
             }
 
-            var response = await _javaApiClient.CategorizarChamadoAsync(chamado);
+            var descricao = (chamado.Titulo + " " + chamado.Motivo).ToLowerInvariant();
 
-            if (response != null && !string.IsNullOrEmpty(response.Categoria))
+            var response = new CategorizacaoResponse();
+
+            if (descricao.Contains("senha") || descricao.Contains("login") || descricao.Contains("acesso"))
             {
-                // Categoria e Subcategoria não existem no banco, apenas logando
-                // chamado.Categoria e chamado.Subcategoria são read-only
-
-                // Salvar interação
-                await SalvarInteracaoIAAsync(chamado.UsuarioId, "Categorizacao", 
-                    $"Título: {chamado.Titulo}\nDescrição: {chamado.Descricao}", 
-                    $"Categoria: {response.Categoria}, Subcategoria: {response.Subcategoria}",
-                    response.Categoria, chamado.Id, response.Confianca);
+                response.Categoria = "Acesso";
+                response.Subcategoria = "Credenciais";
+                response.Confianca = 0.7m;
             }
+            else if (descricao.Contains("internet") || descricao.Contains("rede") || descricao.Contains("wifi"))
+            {
+                response.Categoria = "Rede";
+                response.Subcategoria = "Conectividade";
+                response.Confianca = 0.6m;
+            }
+            else if (descricao.Contains("impressora") || descricao.Contains("scanner") || descricao.Contains("hardware"))
+            {
+                response.Categoria = "Hardware";
+                response.Subcategoria = "Periféricos";
+                response.Confianca = 0.55m;
+            }
+            else if (descricao.Contains("erro") || descricao.Contains("bug") || descricao.Contains("falha"))
+            {
+                response.Categoria = "Aplicação";
+                response.Subcategoria = "Instabilidade";
+                response.Confianca = 0.5m;
+            }
+            else
+            {
+                response.Categoria = "Geral";
+                response.Subcategoria = "Outros";
+                response.Confianca = 0.4m;
+            }
+
+            await SalvarInteracaoIAAsync(chamado.UsuarioId, "Categorizacao",
+                $"Título: {chamado.Titulo}\nDescrição: {chamado.Descricao}",
+                $"Categoria sugerida: {response.Categoria} / {response.Subcategoria}",
+                response.Categoria, chamado.Id, response.Confianca);
 
             return response;
         }
@@ -99,20 +144,10 @@ public class AIService : IAIService
     {
         try
         {
-            var sucesso = await _javaApiClient.ValidarCategorizacaoAsync(chamadoId, categoriaOriginal, categoriaCorrigida);
+            var coerente = string.Equals(categoriaOriginal, categoriaCorrigida, StringComparison.OrdinalIgnoreCase)
+                || string.IsNullOrWhiteSpace(categoriaOriginal);
 
-            if (sucesso)
-            {
-                // Atualizar chamado
-                var chamado = await _context.Chamados.FindAsync(chamadoId);
-                if (chamado != null)
-                {
-                    // Categoria não existe no banco, apenas logando
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            return sucesso;
+            return true;
         }
         catch (Exception ex)
         {
@@ -135,27 +170,40 @@ public class AIService : IAIService
                 return new AtribuicaoResponse();
             }
 
-            var response = await _javaApiClient.AtribuirChamadoAsync(chamadoId, tecnicos);
-
-            if (response != null && response.TecnicoId > 0)
+            if (tecnicos == null || tecnicos.Count == 0)
             {
-                // Atualizar chamado
-                var chamado = await _context.Chamados.FindAsync(chamadoId);
-                if (chamado != null)
-                {
-                    chamado.TecnicoId = response.TecnicoId;
-                    chamado.Status = "EmAndamento";
-                    await _context.SaveChangesAsync();
-
-                    // Salvar interação
-                    await SalvarInteracaoIAAsync(chamado.UsuarioId, "Atribuicao", 
-                        $"Chamado {chamadoId} atribuído", 
-                        $"Técnico: {response.TecnicoNome} ({response.TecnicoEmail})",
-                        chamado.Categoria, chamadoId, response.Confianca);
-                }
+                Console.WriteLine("Nenhum técnico disponível para atribuição");
+                return new AtribuicaoResponse();
             }
 
-            return response;
+            var chamado = await _context.Chamados.FindAsync(chamadoId);
+            if (chamado == null)
+            {
+                Console.WriteLine($"Chamado {chamadoId} não encontrado para atribuição");
+                return new AtribuicaoResponse();
+            }
+
+            var tecnicoSelecionado = tecnicos
+                .OrderBy(t => t.UltimoLogin ?? DateTime.MinValue)
+                .First();
+
+            chamado.TecnicoId = tecnicoSelecionado.Id;
+            chamado.Status = "EmAndamento";
+            await _context.SaveChangesAsync();
+
+            await SalvarInteracaoIAAsync(chamado.UsuarioId, "Atribuicao",
+                $"Chamado {chamadoId} atribuído automaticamente",
+                $"Técnico: {tecnicoSelecionado.Nome} ({tecnicoSelecionado.Email})",
+                chamado.Categoria, chamadoId, 1.0m);
+
+            return new AtribuicaoResponse
+            {
+                TecnicoId = tecnicoSelecionado.Id,
+                TecnicoNome = tecnicoSelecionado.Nome,
+                TecnicoEmail = tecnicoSelecionado.Email,
+                Confianca = 1.0m,
+                Justificativa = "Atribuição baseada na disponibilidade (último login)."
+            };
         }
         catch (Exception ex)
         {
@@ -172,7 +220,74 @@ public class AIService : IAIService
     {
         try
         {
-            return await _javaApiClient.AnalisarPadroesAsync(dataInicio, dataFim, categoria);
+            var chamados = await _context.Chamados
+                .Where(c => c.DataAbertura >= dataInicio && c.DataAbertura <= dataFim)
+                .ToListAsync();
+
+            if (!chamados.Any())
+            {
+                return new AnalisePadroesResponse
+                {
+                    Estatisticas = new EstatisticasGerais
+                    {
+                        TotalChamados = 0,
+                        TempoMedioResolucao = 0,
+                        TaxaResolucao = 0,
+                        CategoriaMaisComum = null
+                    },
+                    TendenciaCategorias = new List<TendenciaCategoria>(),
+                    TendenciaTempo = new List<TendenciaTempo>(),
+                    ProblemasRecorrentes = new List<ProblemaRecorrente>()
+                };
+            }
+
+            var resolvidos = chamados.Where(c => c.DataFechamento.HasValue).ToList();
+            var tempoMedioResolucao = resolvidos.Any()
+                ? resolvidos
+                    .Where(c => c.DataFechamento.HasValue)
+                    .Average(c => (c.DataFechamento!.Value - c.DataAbertura).TotalHours)
+                : 0;
+
+            var tendenciaTempo = chamados
+                .GroupBy(c => c.DataAbertura.Date)
+                .Select(g => new TendenciaTempo
+                {
+                    Data = g.Key,
+                    QuantidadeChamados = g.Count(),
+                    TempoMedioResolucao = g
+                        .Where(c => c.DataFechamento.HasValue)
+                        .Select(c => (c.DataFechamento!.Value - c.DataAbertura).TotalHours)
+                        .DefaultIfEmpty(0)
+                        .Average()
+                })
+                .OrderBy(t => t.Data)
+                .ToList();
+
+            var problemasRecorrentes = chamados
+                .GroupBy(c => c.Titulo)
+                .Select(g => new ProblemaRecorrente
+                {
+                    Descricao = g.Key,
+                    Frequencia = g.Count(),
+                    Categoria = null
+                })
+                .OrderByDescending(p => p.Frequencia)
+                .Take(5)
+                .ToList();
+
+            return new AnalisePadroesResponse
+            {
+                Estatisticas = new EstatisticasGerais
+                {
+                    TotalChamados = chamados.Count,
+                    TempoMedioResolucao = Math.Round(tempoMedioResolucao, 2),
+                    TaxaResolucao = Math.Round((double)resolvidos.Count / chamados.Count * 100, 2),
+                    CategoriaMaisComum = null
+                },
+                TendenciaCategorias = new List<TendenciaCategoria>(),
+                TendenciaTempo = tendenciaTempo,
+                ProblemasRecorrentes = problemasRecorrentes
+            };
         }
         catch (Exception ex)
         {
@@ -199,7 +314,7 @@ public class AIService : IAIService
                 .Where(f => palavrasChave.Any(p => 
                     f.Titulo.ToLower().Contains(p) || 
                     f.Descricao.ToLower().Contains(p) ||
-                    f.Tags.ToLower().Contains(p)))
+                    (!string.IsNullOrEmpty(f.Tags) && f.Tags.ToLower().Contains(p))))
                 .OrderByDescending(f => f.Utilidade)
                 .ThenByDescending(f => f.Visualizacoes)
                 .Take(5)
@@ -219,19 +334,87 @@ public class AIService : IAIService
 
     #region Configurações
 
-    public async Task<bool> IsCategorizacaoAtivaAsync()
+    public Task<bool> IsCategorizacaoAtivaAsync()
     {
-        return await _javaApiClient.IsCategorizacaoAtivaAsync();
+        return Task.FromResult(true);
     }
 
-    public async Task<bool> IsAtribuicaoAtivaAsync()
+    public Task<bool> IsAtribuicaoAtivaAsync()
     {
-        return await _javaApiClient.IsAtribuicaoAtivaAsync();
+        return Task.FromResult(true);
     }
 
     #endregion
 
     #region Métodos Auxiliares
+
+    private async Task<string> ObterProcedimentosAsync()
+    {
+        if (!string.IsNullOrEmpty(_cachedSystemPrompt))
+        {
+            return _cachedSystemPrompt;
+        }
+
+        await _systemPromptLock.WaitAsync();
+        try
+        {
+            if (!string.IsNullOrEmpty(_cachedSystemPrompt))
+            {
+                return _cachedSystemPrompt;
+            }
+
+            var conteudo = await _googleDriveService.LerDocumentoComoStringAsync(ProcedimentosFileId);
+            _cachedSystemPrompt = conteudo;
+            return conteudo;
+        }
+        finally
+        {
+            _systemPromptLock.Release();
+        }
+    }
+
+    private async Task<string> ObterSystemPromptAsync(Dictionary<string, object> contextoUsuario)
+    {
+        var procedimentos = await ObterProcedimentosAsync();
+        var builder = new StringBuilder();
+
+        builder.AppendLine("Você é o assistente virtual HelpFast. Utilize as orientações abaixo para responder aos usuários.");
+        builder.AppendLine();
+        builder.AppendLine("### Procedimentos de Verificação");
+        builder.AppendLine(procedimentos);
+        builder.AppendLine();
+        builder.AppendLine("### Contexto do Usuário");
+
+        if (contextoUsuario.TryGetValue("nomeUsuario", out var nome))
+        {
+            builder.AppendLine($"- Nome: {nome}");
+        }
+
+        if (contextoUsuario.TryGetValue("emailUsuario", out var email))
+        {
+            builder.AppendLine($"- E-mail: {email}");
+        }
+
+        if (contextoUsuario.TryGetValue("tipoUsuario", out var tipo))
+        {
+            builder.AppendLine($"- Tipo de usuário: {tipo}");
+        }
+
+        if (contextoUsuario.TryGetValue("historicoInteracoes", out var historico) && historico is System.Collections.IEnumerable historicoList)
+        {
+            builder.AppendLine("- Interações recentes:");
+            int index = 1;
+            foreach (var item in historicoList)
+            {
+                builder.AppendLine($"  {index++}. {JsonSerializer.Serialize(item)}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Responda de forma objetiva, cordial e baseada nas orientações apresentadas. Caso a dúvida não esteja coberta, informe que vai encaminhar para suporte humano.");
+
+        return builder.ToString();
+    }
 
     private async Task<Dictionary<string, object>> ConstruirContextoUsuarioAsync(int usuarioId)
     {

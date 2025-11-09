@@ -8,40 +8,30 @@
         ResizeMode="CanResize"
         MinWidth="600"
         MinHeight="500"
-        Background="#1D2935">
+        Background="#161D28"
+        Style="{x:Null}">
     
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- Logo Panel -->
-        <Border Grid.Column="0" Background="#1D2935">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Image Source="pack://application:,,,/Assets/Images/logo.png" 
-                       Width="150" 
-                       Height="150"
+        <!-- Login Form Panel -->
+        <Border Background="#1C2937"
+                Margin="5"
+                Width="440"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="50">
+            <StackPanel HorizontalAlignment="Stretch">
+                
+                <!-- Logo -->
+                <Image Source="pack://application:,,,/Assets/Images/logo.png"
+                       Width="160"
+                       Height="160"
                        Stretch="Uniform"
                        HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
-
-        <!-- Login Form Panel -->
-        <Border Grid.Column="1" Background="#3C3C3F" Margin="30">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="400">
-                
-                <!-- Title -->
-                <TextBlock Text="Login" 
-                           FontSize="16" 
-                           FontWeight="Bold" 
-                           Foreground="White"
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,30"/>
+                       Margin="0,0,0,0"/>
 
                 <!-- Email Field -->
-                <StackPanel Margin="0,0,0,20">
+                <StackPanel Margin="0,0,0,20"
+                            HorizontalAlignment="Stretch">
                     <TextBlock Text="E-mail:" 
                                FontSize="10" 
                                Foreground="White"
@@ -52,11 +42,13 @@
                              Background="#505053"
                              Foreground="White"
                              BorderBrush="#505053"
-                             Padding="10,8"/>
+                             Padding="10,8"
+                             HorizontalAlignment="Stretch"/>
                 </StackPanel>
 
                 <!-- Password Field -->
-                <StackPanel Margin="0,0,0,20">
+                <StackPanel Margin="0,0,0,20"
+                            HorizontalAlignment="Stretch">
                     <TextBlock Text="Senha:" 
                                FontSize="10" 
                                Foreground="White"
@@ -67,7 +59,8 @@
                                  Foreground="White"
                                  BorderBrush="#505053"
                                  Padding="10,8"
-                                 PasswordChanged="SenhaPasswordBox_PasswordChanged"/>
+                                 PasswordChanged="SenhaPasswordBox_PasswordChanged"
+                                 HorizontalAlignment="Stretch"/>
                 </StackPanel>
 
                 <!-- Error Message -->
@@ -79,63 +72,26 @@
                            Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
 
                 <!-- Login Button -->
-                <Button Content="{Binding IsLoading, Converter={StaticResource LoadingToTextConverter}}"
+                <Button Content="{Binding IsLoading, Converter={StaticResource LoadingToTextConverter}, ConverterParameter='Login|Entrando...'}"
                         Click="LoginButton_Click"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
-                        Height="45"
-                        Background="#0078D7"
-                        Foreground="White"
-                        BorderThickness="0"
-                        FontSize="12"
-                        FontWeight="Bold"
-                        Margin="0,0,0,15"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="3">
-                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                            VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#106EBE"/>
-                                            </Trigger>
-                                            <Trigger Property="IsPressed" Value="True">
-                                                <Setter Property="Background" Value="#005A9E"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                        Margin="0,0,0,5"
+                        HorizontalAlignment="Stretch"
+                        Style="{StaticResource ActionButtonStyle}"/>
+
+                <TextBlock Text="OU"
+                           Foreground="#9AA5B1"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,5"/>
 
                 <!-- Register Button -->
-                <Button Content="CADASTRAR"
+                <Button Content="Cadastrar"
                         Click="CadastrarButton_Click"
-                        Background="Transparent"
-                        Foreground="#0078D7"
-                        BorderThickness="0"
-                        FontSize="10"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                        Margin="0"
+                        HorizontalAlignment="Stretch"
+                        Style="{StaticResource ActionButtonStyle}"/>
 
             </StackPanel>
         </Border>

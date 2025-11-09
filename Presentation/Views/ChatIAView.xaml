@@ -8,7 +8,8 @@
         ResizeMode="CanResize"
         MinWidth="600"
         MinHeight="500"
-        Background="#1D2935">
+        Background="#161D28"
+        WindowState="Maximized">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -19,14 +20,11 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#9C27B0" Height="80">
-            <Grid Margin="20,10">
-                <TextBlock Text="Chat com Inteligência Artificial" 
-                           FontSize="18" 
-                           FontWeight="Bold" 
-                           Foreground="White"
-                           VerticalAlignment="Center"/>
-            </Grid>
+        <Border Grid.Row="0" Background="#161D28" Height="100" Padding="0,20">
+            <Image Source="pack://application:,,,/Assets/Images/logo.png"
+                   Height="60"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
         </Border>
 
         <!-- Messages Area -->
@@ -87,36 +85,9 @@
                     Content="ENVIAR"
                     Click="EnviarButton_Click"
                     IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
-                    Height="40"
-                    Width="100"
-                    Background="#9C27B0"
-                    Foreground="White"
-                    BorderThickness="0"
-                    FontSize="11"
-                    FontWeight="Bold"
+                    Width="120"
                     Margin="10,0,0,0"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" 
-                                            CornerRadius="3">
-                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                        VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#BA68C8"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Style="{StaticResource ActionButtonStyle}"/>
         </Grid>
     </Grid>
 </Window>
