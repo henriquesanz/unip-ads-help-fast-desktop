@@ -28,56 +28,52 @@ public partial class App : Application
     [return: MarshalAs(UnmanagedType.Bool)]
     static extern bool AttachConsole(uint dwProcessId);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    static extern IntPtr GetStdHandle(int nStdHandle);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    static extern bool SetStdHandle(int nStdHandle, IntPtr hHandle);
-
-    private const int STD_OUTPUT_HANDLE = -11;
-    private const int STD_ERROR_HANDLE = -12;
     private const uint ATTACH_PARENT_PROCESS = 0xFFFFFFFF;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         try
         {
-            // Tentar anexar ao console do processo pai primeiro (quando executado via dotnet run)
-            if (!AttachConsole(ATTACH_PARENT_PROCESS))
+            var logsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            Directory.CreateDirectory(logsDirectory);
+            var logPath = Path.Combine(logsDirectory, $"app_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+            var logFileWriter = new StreamWriter(logPath, append: true) { AutoFlush = true };
+
+#if DEBUG
+            var consoleAttached = AttachConsole(ATTACH_PARENT_PROCESS);
+            if (!consoleAttached)
             {
-                // Se não conseguir anexar, criar um novo console
-                AllocConsole();
+                consoleAttached = AllocConsole();
             }
 
-            // Garantir que stdout e stderr estão configurados
-            var stdoutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-            var stderrHandle = GetStdHandle(STD_ERROR_HANDLE);
-            
-            // Redirecionar Console.Out e Console.Error para garantir que funcionem
-            try
+            if (consoleAttached)
             {
-                Console.SetOut(new System.IO.StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
-                Console.SetError(new System.IO.StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
+                try
+                {
+                    var consoleWriter = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
+                    var dualWriter = new DualTextWriter(consoleWriter, logFileWriter);
+                    Console.SetOut(dualWriter);
+                    Console.SetError(dualWriter);
+                }
+                catch
+                {
+                    Console.SetOut(logFileWriter);
+                    Console.SetError(logFileWriter);
+                }
             }
-            catch
+            else
             {
-                // Se falhar, continuar sem redirecionar
+                Console.SetOut(logFileWriter);
+                Console.SetError(logFileWriter);
             }
+#else
+            Console.SetOut(logFileWriter);
+            Console.SetError(logFileWriter);
+#endif
 
-            // Criar arquivo de log como backup
-            var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", $"app_{DateTime.Now:yyyyMMdd_HHmmss}.log");
-            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-            var logFile = new System.IO.StreamWriter(logPath, append: true) { AutoFlush = true };
-            
-            // Criar um TextWriter que escreve tanto no console quanto no arquivo
-            var dualWriter = new DualTextWriter(Console.Out, logFile);
-            Console.SetOut(dualWriter);
-            Console.SetError(dualWriter);
-
-            Console.WriteLine("=== HelpFast Desktop - Logs de Debug ===");
+            Console.WriteLine("=== HelpFast Desktop - Logs ===");
             Console.WriteLine($"Iniciando aplicação em {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            Console.WriteLine($"Console alocado: {stdoutHandle != IntPtr.Zero}");
-            Console.WriteLine($"Logs também salvos em: {logPath}");
+            Console.WriteLine($"Logs salvos em: {logPath}");
             Console.WriteLine();
             var host = CreateHostBuilder().Build();
             ServiceProvider = host.Services;
