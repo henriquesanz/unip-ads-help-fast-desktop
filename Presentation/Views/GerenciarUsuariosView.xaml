@@ -58,6 +58,12 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right" 
                     Margin="20">
+            <Button Content="CADASTRAR"
+                    Click="CadastrarButton_Click"
+                    Width="130"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource ActionButtonStyle}"/>
+
             <Button Content="EDITAR"
                     Click="EditarButton_Click"
                     IsEnabled="{Binding UsuarioSelecionado, Converter={StaticResource NullToBooleanConverter}}"

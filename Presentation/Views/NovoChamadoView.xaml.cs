@@ -22,8 +22,17 @@ public partial class NovoChamadoView : Window
     {
         MessageBox.Show($"Chamado #{chamado.Id} criado com sucesso!", "Sucesso", 
             MessageBoxButton.OK, MessageBoxImage.Information);
+
+        var ownerWindow = Owner;
+
         DialogResult = true;
         Close();
+
+        if (App.ServiceProvider != null)
+        {
+            var navigationController = new NavigationController(App.ServiceProvider);
+            navigationController.NavigateToForm("FAQ", ownerWindow);
+        }
     }
 
     private void OnCancelarRequested()

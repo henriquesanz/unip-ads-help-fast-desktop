@@ -1,6 +1,7 @@
 using HelpFastDesktop.Core.Models.Entities;
 using HelpFastDesktop.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -57,10 +58,20 @@ public class MeusChamadosController : BaseController
     public void SelecionarChamado(Chamado chamado)
     {
         _model.ChamadoSelecionado = chamado;
-        OnChamadoSelecionado?.Invoke(chamado);
     }
 
-    public event Action<Chamado>? OnChamadoSelecionado;
+    public void SolicitarChatParaChamadoSelecionado()
+    {
+        if (_model.ChamadoSelecionado == null)
+        {
+            _model.ErrorMessage = "Selecione um chamado para iniciar o chat com a IA.";
+            return;
+        }
+
+        OnChatSolicitado?.Invoke(_model.ChamadoSelecionado);
+    }
+
+    public event Action<Chamado>? OnChatSolicitado;
 }
 
 public class MeusChamadosModel : INotifyPropertyChanged

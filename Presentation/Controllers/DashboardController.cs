@@ -89,37 +89,14 @@ public class DashboardController : BaseController
             }
         };
 
-        var suporteSection = new DashboardSection
-        {
-            Title = "🔍 Suporte e FAQ",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
-                new DashboardAction
-                {
-                    Title = "CONSULTAR FAQ",
-                    Description = "Buscar perguntas frequentes",
-                    Color = "#FF8C00",
-                    Command = new RelayCommand(() => NavigateToForm("FAQ"))
-                },
-                new DashboardAction
-                {
-                    Title = "CHAT COM IA",
-                    Description = "Pré-atendimento com inteligência artificial",
-                    Color = "#9C27B0",
-                    Command = new RelayCommand(() => NavigateToForm("ChatIA"))
-                }
-            }
-        };
-
         _model.Sections.Add(chamadosSection);
-        _model.Sections.Add(suporteSection);
     }
 
     private void ConfigureTecnicoSections()
     {
         var chamadosSection = new DashboardSection
         {
-            Title = "📋 Gestão de Chamados",
+            Title = "🛠️ Chamados Atribuídos",
             Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
             {
                 new DashboardAction
@@ -128,97 +105,37 @@ public class DashboardController : BaseController
                     Description = "Visualizar meus chamados atribuídos",
                     Color = "#0078D7",
                     Command = new RelayCommand(() => NavigateToForm("ChamadosAtribuidos"))
-                },
-                new DashboardAction
-                {
-                    Title = "TODOS OS CHAMADOS",
-                    Description = "Visualizar todos os chamados do sistema",
-                    Color = "#00964B",
-                    Command = new RelayCommand(() => NavigateToForm("TodosChamados"))
-                }
-            }
-        };
-
-        var relatoriosSection = new DashboardSection
-        {
-            Title = "📊 Relatórios e Performance",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
-                new DashboardAction
-                {
-                    Title = "RELATÓRIOS",
-                    Description = "Relatórios de performance e métricas",
-                    Color = "#6432A0",
-                    Command = new RelayCommand(() => NavigateToForm("Relatorios"))
                 }
             }
         };
 
         _model.Sections.Add(chamadosSection);
-        _model.Sections.Add(relatoriosSection);
     }
 
     private void ConfigureAdministradorSections()
     {
-        var chamadosSection = new DashboardSection
+        var administracaoSection = new DashboardSection
         {
-            Title = "📋 Gestão de Chamados",
+            Title = "⚙️ Administração do Sistema",
             Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
             {
-                new DashboardAction
-                {
-                    Title = "TODOS OS CHAMADOS",
-                    Description = "Gerenciar todos os chamados do sistema",
-                    Color = "#0078D7",
-                    Command = new RelayCommand(() => NavigateToForm("TodosChamados"))
-                },
-                new DashboardAction
-                {
-                    Title = "CHAMADOS ATRIBUÍDOS",
-                    Description = "Visualizar chamados atribuídos",
-                    Color = "#00964B",
-                    Command = new RelayCommand(() => NavigateToForm("ChamadosAtribuidos"))
-                },
                 new DashboardAction
                 {
                     Title = "ATRIBUIR CHAMADOS",
-                    Description = "Atribuir chamados para técnicos",
+                    Description = "Distribuir chamados entre os técnicos",
                     Color = "#FF5722",
                     Command = new RelayCommand(() => NavigateToForm("AtribuirChamados"))
-                }
-            }
-        };
-
-        var usuariosSection = new DashboardSection
-        {
-            Title = "👥 Gestão de Usuários",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
+                },
                 new DashboardAction
                 {
                     Title = "GERENCIAR USUÁRIOS",
-                    Description = "Gerenciar usuários do sistema",
+                    Description = "Administrar contas de usuários",
                     Color = "#C85000",
                     Command = new RelayCommand(() => NavigateToForm("GerenciarUsuarios"))
                 },
                 new DashboardAction
                 {
-                    Title = "CADASTRAR USUÁRIO",
-                    Description = "Criar novos usuários",
-                    Color = "#4CAF50",
-                    Command = new RelayCommand(() => NavigateToForm("CadastrarUsuario"))
-                }
-            }
-        };
-
-        var relatoriosSection = new DashboardSection
-        {
-            Title = "📊 Relatórios e Análises",
-            Actions = new System.Collections.ObjectModel.ObservableCollection<DashboardAction>
-            {
-                new DashboardAction
-                {
-                    Title = "RELATÓRIOS EXECUTIVOS",
+                    Title = "EXTRAIR RELATÓRIOS",
                     Description = "Relatórios e métricas do sistema",
                     Color = "#6432A0",
                     Command = new RelayCommand(() => NavigateToForm("Relatorios"))
@@ -226,9 +143,7 @@ public class DashboardController : BaseController
             }
         };
 
-        _model.Sections.Add(chamadosSection);
-        _model.Sections.Add(usuariosSection);
-        _model.Sections.Add(relatoriosSection);
+        _model.Sections.Add(administracaoSection);
     }
 
     private void NavigateToForm(string formName)

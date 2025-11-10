@@ -79,6 +79,13 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right" 
                     Margin="20">
+            <Button Content="CHAT COM IA"
+                    Click="ChatIAButton_Click"
+                    IsEnabled="{Binding ChamadoSelecionado, Converter={StaticResource NullToBooleanConverter}}"
+                    Width="150"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource ActionButtonStyle}"/>
+
             <Button Content="ATUALIZAR"
                     Click="AtualizarButton_Click"
                     IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"

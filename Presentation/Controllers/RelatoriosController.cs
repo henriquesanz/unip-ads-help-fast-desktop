@@ -1,9 +1,12 @@
 using HelpFastDesktop.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace HelpFastDesktop.Presentation.Controllers;
@@ -21,76 +24,65 @@ public class RelatoriosController : BaseController
 
     public RelatoriosModel GetModel() => _model;
 
-    public async System.Threading.Tasks.Task CarregarRelatoriosAsync()
+    public void Inicializar()
     {
+        _model.PopularMeses();
+        _model.Mensagem = "Selecione o mês e clique em baixar relatório.";
+    }
+
+    public async System.Threading.Tasks.Task ExportarRelatorioMensalAsync()
+    {
+        if (_model.MesSelecionado == null)
+        {
+            _model.Mensagem = "Escolha um mês antes de exportar.";
+            return;
+        }
+
         try
         {
             _model.IsLoading = true;
-            _model.Mensagem = "Carregando dados do relatório...";
+            _model.Mensagem = "Gerando relatório...";
 
-            var relatorio = await _relatorioService.GerarRelatorioSistemaAsync(_model.DataInicio, _model.DataFim);
-            _model.AplicarRelatorio(relatorio);
-            _model.Mensagem = $"Relatório gerado em {relatorio.GeradoEm:dd/MM/yyyy HH:mm}";
+            var periodoInicio = new DateTime(_model.MesSelecionado.Ano, _model.MesSelecionado.Mes, 1);
+            var periodoFim = periodoInicio.AddMonths(1).AddTicks(-1);
+
+            var relatorio = await _relatorioService.GerarRelatorioSistemaAsync(periodoInicio, periodoFim);
+            var bytes = await _relatorioService.ExportarRelatorioSistemaAsync(relatorio, RelatorioFormatoExportacao.Pdf);
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Arquivo PDF (*.pdf)|*.pdf",
+                FileName = $"relatorio_helpfast_{periodoInicio:yyyy_MM}.pdf"
+            };
+
+            var resultado = dialog.ShowDialog();
+            if (resultado != true)
+            {
+                _model.Mensagem = "Download cancelado pelo usuário.";
+                return;
+            }
+
+            await File.WriteAllBytesAsync(dialog.FileName, bytes);
+
+            _model.Mensagem = $"Relatório baixado com sucesso em {dialog.FileName}";
         }
         catch (Exception ex)
         {
-            _model.Mensagem = $"Erro: {ex.Message}";
+            _model.Mensagem = $"Erro ao gerar relatório: {ex.Message}";
         }
         finally
         {
             _model.IsLoading = false;
         }
     }
-
-    public async System.Threading.Tasks.Task ExportarRelatorioAsync(RelatorioFormatoExportacao formato)
-    {
-        if (_model.RelatorioAtual == null)
-        {
-            _model.Mensagem = "Gere o relatório antes de exportar.";
-            return;
-        }
-
-        try
-        {
-            var filtro = formato == RelatorioFormatoExportacao.Pdf
-                ? "Arquivo PDF (*.pdf)|*.pdf"
-                : "Arquivo Excel (*.xlsx)|*.xlsx";
-
-            var extensao = formato == RelatorioFormatoExportacao.Pdf ? ".pdf" : ".xlsx";
-
-            var dialog = new SaveFileDialog
-            {
-                Filter = filtro,
-                FileName = $"relatorio_helpfast_{DateTime.Now:yyyyMMdd_HHmm}{extensao}"
-            };
-
-            var resultado = dialog.ShowDialog();
-            if (resultado != true)
-            {
-                _model.Mensagem = "Exportação cancelada pelo usuário.";
-                return;
-            }
-
-            var bytes = await _relatorioService.ExportarRelatorioSistemaAsync(_model.RelatorioAtual, formato);
-            await File.WriteAllBytesAsync(dialog.FileName, bytes);
-
-            _model.Mensagem = $"Relatório exportado com sucesso para {dialog.FileName}";
-        }
-        catch (Exception ex)
-        {
-            _model.Mensagem = $"Erro ao exportar relatório: {ex.Message}";
-        }
-    }
 }
 
 public class RelatoriosModel : INotifyPropertyChanged
 {
-    private string _mensagem = "Carregando relatórios...";
-    private bool _isLoading = false;
-    private DateTime? _dataInicio;
-    private DateTime? _dataFim;
-    private RelatorioSistemaResumoDto? _resumo;
-    private RelatorioSistemaDto? _relatorioAtual;
+    private string _mensagem = string.Empty;
+    private bool _isLoading;
+    private ObservableCollection<RelatorioMesOpcao> _mesesDisponiveis = new();
+    private RelatorioMesOpcao? _mesSelecionado;
 
     public string Mensagem
     {
@@ -113,87 +105,41 @@ public class RelatoriosModel : INotifyPropertyChanged
         }
     }
 
-    public DateTime? DataInicio
+    public ObservableCollection<RelatorioMesOpcao> MesesDisponiveis
     {
-        get => _dataInicio;
+        get => _mesesDisponiveis;
         set
         {
-            _dataInicio = value;
+            _mesesDisponiveis = value;
             OnPropertyChanged();
         }
     }
 
-    public DateTime? DataFim
+    public RelatorioMesOpcao? MesSelecionado
     {
-        get => _dataFim;
+        get => _mesSelecionado;
         set
         {
-            _dataFim = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public RelatorioSistemaResumoDto? Resumo
-    {
-        get => _resumo;
-        private set
-        {
-            _resumo = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public RelatorioSistemaDto? RelatorioAtual
-    {
-        get => _relatorioAtual;
-        private set
-        {
-            _relatorioAtual = value;
+            _mesSelecionado = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(PodeExportar));
-            OnPropertyChanged(nameof(PossuiDados));
         }
     }
 
-    public bool PodeExportar => !_isLoading && _relatorioAtual != null;
+    public bool PodeExportar => !_isLoading && _mesSelecionado != null;
 
-    public bool PossuiDados => _relatorioAtual != null;
-
-    public ObservableCollection<CargoRelatorioDto> Cargos { get; } = new();
-    public ObservableCollection<UsuarioRelatorioDto> Usuarios { get; } = new();
-    public ObservableCollection<ChamadoRelatorioDto> Chamados { get; } = new();
-    public ObservableCollection<ChatRelatorioDto> Chats { get; } = new();
-    public ObservableCollection<ChatIaRelatorioDto> ChatIaResults { get; } = new();
-    public ObservableCollection<HistoricoChamadoRelatorioDto> HistoricosChamados { get; } = new();
-    public ObservableCollection<FaqRelatorioDto> Faqs { get; } = new();
-
-    public RelatoriosModel()
+    public void PopularMeses(int quantidadeMeses = 12)
     {
-        DataInicio = DateTime.Today.AddDays(-30);
-        DataFim = DateTime.Today;
-    }
+        MesesDisponiveis.Clear();
+        var referencia = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
 
-    public void AplicarRelatorio(RelatorioSistemaDto relatorio)
-    {
-        AtualizarColecao(Cargos, relatorio.Cargos);
-        AtualizarColecao(Usuarios, relatorio.Usuarios);
-        AtualizarColecao(Chamados, relatorio.Chamados);
-        AtualizarColecao(Chats, relatorio.Chats);
-        AtualizarColecao(ChatIaResults, relatorio.ChatIaResults);
-        AtualizarColecao(HistoricosChamados, relatorio.HistoricosChamados);
-        AtualizarColecao(Faqs, relatorio.Faqs);
-
-        Resumo = relatorio.Resumo;
-        RelatorioAtual = relatorio;
-    }
-
-    private static void AtualizarColecao<T>(ObservableCollection<T> destino, IEnumerable<T> origem)
-    {
-        destino.Clear();
-        foreach (var item in origem)
+        for (int i = 0; i < quantidadeMeses; i++)
         {
-            destino.Add(item);
+            var data = referencia.AddMonths(-i);
+            MesesDisponiveis.Add(new RelatorioMesOpcao(data));
         }
+
+        MesSelecionado = MesesDisponiveis.FirstOrDefault();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -201,6 +147,20 @@ public class RelatoriosModel : INotifyPropertyChanged
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
+
+public record RelatorioMesOpcao
+{
+    public int Ano { get; }
+    public int Mes { get; }
+    public string Descricao { get; }
+
+    public RelatorioMesOpcao(DateTime data)
+    {
+        Ano = data.Year;
+        Mes = data.Month;
+        Descricao = data.ToString("MMMM \\de yyyy", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")).ToUpperInvariant();
     }
 }
 

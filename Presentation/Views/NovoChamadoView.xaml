@@ -37,34 +37,87 @@
                                FontWeight="Bold"
                                Foreground="White"
                                Margin="0,0,0,5"/>
-                    <TextBox x:Name="AssuntoTextBox"
-                             Text="{Binding Assunto, UpdateSourceTrigger=PropertyChanged}"
-                             TextChanged="AssuntoTextBox_TextChanged"
-                             Height="45"
-                             Background="#505053"
-                             Foreground="White"
-                             BorderBrush="#505053"
-                             Padding="10,8"/>
+                    <Grid>
+                        <TextBox x:Name="AssuntoTextBox"
+                                 Text="{Binding Assunto, UpdateSourceTrigger=PropertyChanged}"
+                                 TextChanged="AssuntoTextBox_TextChanged"
+                                 Height="52"
+                                 Background="White"
+                                 Foreground="#161D28"
+                                 BorderBrush="#1C2937"
+                                 BorderThickness="1"
+                                 Padding="16,12"
+                                 FontSize="14"
+                                 FontWeight="SemiBold"/>
+                        <TextBlock Text="Escreva o assunto aqui:"
+                                   Foreground="#8A8F9C"
+                                   Margin="18,12,0,0"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Text, ElementName=AssuntoTextBox}" Value=""/>
+                                                <Condition Binding="{Binding IsKeyboardFocusWithin, ElementName=AssuntoTextBox}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
                 </StackPanel>
 
                 <!-- Motivo Field -->
                 <StackPanel Margin="0,0,0,20">
-                    <TextBlock Text="Descreva o problema ou solicitação:" 
+                    <TextBlock Text="Motivo:" 
                                FontSize="10" 
                                FontWeight="Bold"
                                Foreground="White"
                                Margin="0,0,0,5"/>
-                    <TextBox x:Name="MotivoTextBox"
-                             Text="{Binding Motivo, UpdateSourceTrigger=PropertyChanged}"
-                             TextChanged="MotivoTextBox_TextChanged"
-                             Height="200"
-                             TextWrapping="Wrap"
-                             AcceptsReturn="True"
-                             VerticalScrollBarVisibility="Auto"
-                             Background="#505053"
-                             Foreground="White"
-                             BorderBrush="#505053"
-                             Padding="10,8"/>
+                    <Grid>
+                        <TextBox x:Name="MotivoTextBox"
+                                 Text="{Binding Motivo, UpdateSourceTrigger=PropertyChanged}"
+                                 TextChanged="MotivoTextBox_TextChanged"
+                                 Height="220"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 Background="White"
+                                 Foreground="#161D28"
+                                 BorderBrush="#1C2937"
+                                 BorderThickness="1"
+                                 Padding="16,12"
+                                 FontSize="14"
+                                 FontWeight="SemiBold"/>
+                        <TextBlock Text="Escreva o motivo aqui:"
+                                   Foreground="#8A8F9C"
+                                   Margin="18,12,0,0"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   IsHitTestVisible="False"
+                                   VerticalAlignment="Top">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Text, ElementName=MotivoTextBox}" Value=""/>
+                                                <Condition Binding="{Binding IsKeyboardFocusWithin, ElementName=MotivoTextBox}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
                 </StackPanel>
 
                 <!-- Error Message -->
@@ -83,17 +136,17 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Center" 
                     Margin="30,20">
-            
-            <Button Content="{Binding IsLoading, Converter={StaticResource LoadingToTextConverter}, ConverterParameter='CRIAR CHAMADO'}"
-                    Click="CriarButton_Click"
-                    IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
-                    Width="150"
+
+            <Button Content="Voltar ao menu"
+                    Click="CancelarButton_Click"
+                    Width="160"
                     Margin="0,0,10,0"
                     Style="{StaticResource ActionButtonStyle}"/>
 
-            <Button Content="CANCELAR"
-                    Click="CancelarButton_Click"
-                    Width="120"
+            <Button Content="{Binding IsLoading, Converter={StaticResource LoadingToTextConverter}, ConverterParameter='Abrir chamado|Abrindo...'}"
+                    Click="CriarButton_Click"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"
+                    Width="160"
                     Style="{StaticResource ActionButtonStyle}"/>
 
         </StackPanel>

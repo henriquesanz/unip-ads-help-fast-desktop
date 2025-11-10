@@ -14,6 +14,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -27,8 +28,30 @@
                    VerticalAlignment="Center"/>
         </Border>
 
+        <!-- Chamado Context Header -->
+        <Border Grid.Row="1"
+                Margin="20,10,20,0"
+                Background="#1F2D3C"
+                CornerRadius="12"
+                Padding="20,10"
+                Visibility="{Binding PossuiChamadoContexto, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding ChamadoId, StringFormat='ID Chamado: #{0}'}"
+                           Foreground="White"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="0,0,24,0"/>
+                <TextBlock Foreground="White"
+                           FontSize="14"
+                           FontWeight="SemiBold">
+                    <Run Text="Assunto: "/>
+                    <Run Text="{Binding ChamadoAssunto}"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
         <!-- Messages Area -->
-        <ScrollViewer Grid.Row="1" 
+        <ScrollViewer Grid.Row="2" 
                       VerticalScrollBarVisibility="Auto"
                       Margin="20,10"
                       Background="#464649"
@@ -60,7 +83,7 @@
         </ScrollViewer>
 
         <!-- Error Message -->
-        <TextBlock Grid.Row="2"
+        <TextBlock Grid.Row="3"
                    Text="{Binding ErrorMessage}" 
                    Foreground="#FF6464"
                    Margin="20,5"
@@ -68,7 +91,7 @@
                    Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
 
         <!-- Input Area -->
-        <Grid Grid.Row="3" Margin="20,10">
+        <Grid Grid.Row="4" Margin="20,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>

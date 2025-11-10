@@ -17,29 +17,14 @@ public partial class RelatoriosView : Window
         Loaded += RelatoriosView_Loaded;
     }
 
-    private async void RelatoriosView_Loaded(object sender, RoutedEventArgs e)
+    private void RelatoriosView_Loaded(object sender, RoutedEventArgs e)
     {
-        await _controller.CarregarRelatoriosAsync();
+        _controller.Inicializar();
     }
 
-    private async void AtualizarButton_Click(object sender, RoutedEventArgs e)
+    private async void BaixarRelatorioButton_Click(object sender, RoutedEventArgs e)
     {
-        await _controller.CarregarRelatoriosAsync();
-    }
-
-    private void FecharButton_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
-
-    private async void ExportarPdfButton_Click(object sender, RoutedEventArgs e)
-    {
-        await _controller.ExportarRelatorioAsync(RelatorioFormatoExportacao.Pdf);
-    }
-
-    private async void ExportarExcelButton_Click(object sender, RoutedEventArgs e)
-    {
-        await _controller.ExportarRelatorioAsync(RelatorioFormatoExportacao.Excel);
+        await _controller.ExportarRelatorioMensalAsync();
     }
 }
 

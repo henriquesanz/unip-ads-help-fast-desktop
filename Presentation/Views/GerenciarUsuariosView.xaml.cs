@@ -115,6 +115,29 @@ public partial class GerenciarUsuariosView : Window
         }
     }
 
+    private async void CadastrarButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.ServiceProvider == null)
+        {
+            MessageBox.Show("Serviços da aplicação não estão disponíveis.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        var cadastroController = new CadastroUsuarioController(App.ServiceProvider, UserRole.Cliente);
+        var cadastroView = new CadastroUsuarioView(cadastroController)
+        {
+            Owner = this
+        };
+
+        var resultado = cadastroView.ShowDialog();
+
+        if (resultado == true)
+        {
+            await _controller.CarregarUsuariosAsync();
+            _controller.GetModel().UsuarioSelecionado = null;
+        }
+    }
+
     private async void AtualizarButton_Click(object sender, RoutedEventArgs e)
     {
         await _controller.CarregarUsuariosAsync();
