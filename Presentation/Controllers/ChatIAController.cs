@@ -31,6 +31,8 @@ public class ChatIAController : BaseController
             _model.ErrorMessage = string.Empty;
             _model.Mensagens.Clear();
             _model.MensagemAtual = string.Empty;
+            _model.NumeroInteracoes = 0;
+            _model.FoiDirecionadoParaTecnico = false;
 
             _chamadoContexto = chamado;
             _model.ChamadoId = chamado.Id;
@@ -45,7 +47,7 @@ public class ChatIAController : BaseController
             }
 
             var mensagemContexto = MontarMensagemDeContexto(chamado);
-            var response = await _aiService.ProcessarMensagemChatAsync(usuario.Id, mensagemContexto);
+            var response = await _aiService.ProcessarMensagemChatAsync(usuario.Id, mensagemContexto, chamado.Id);
 
             if (response != null)
             {
@@ -87,20 +89,73 @@ public class ChatIAController : BaseController
                 return;
             }
 
+            // Verificar se já foi direcionado para técnico
+            if (_model.FoiDirecionadoParaTecnico)
+            {
+                var mensagemTexto = _model.MensagemAtual;
+                _model.MensagemAtual = string.Empty;
+
+                // Adicionar mensagem do usuário
+                var mensagemUsuario = new ChatMensagem
+                {
+                    Texto = mensagemTexto,
+                    EhUsuario = true,
+                    DataEnvio = DateTime.Now
+                };
+                _model.Mensagens.Add(mensagemUsuario);
+
+                // Salvar mensagem do usuário mesmo após direcionamento (sem chamar IA)
+                if (_chamadoContexto != null)
+                {
+                    await _aiService.SalvarMensagemChatSimplesAsync(_chamadoContexto.Id, usuario.Id, mensagemTexto, "IA_User");
+                }
+
+                // Retornar mensagem padrão sem enviar para OpenAI
+                var mensagemIA = new ChatMensagem
+                {
+                    Texto = "Aguarde, estamos te direcionando para um técnico, em breve você será respondido.",
+                    EhUsuario = false,
+                    DataEnvio = DateTime.Now
+                };
+                _model.Mensagens.Add(mensagemIA);
+                return;
+            }
+
             // Adicionar mensagem do usuário
-            var mensagemUsuario = new ChatMensagem
+            var mensagemUsuarioNormal = new ChatMensagem
             {
                 Texto = _model.MensagemAtual,
                 EhUsuario = true,
                 DataEnvio = DateTime.Now
             };
-            _model.Mensagens.Add(mensagemUsuario);
+            _model.Mensagens.Add(mensagemUsuarioNormal);
 
             var mensagemParaEnviar = MontarMensagemDeUsuario(_model.MensagemAtual);
             _model.MensagemAtual = string.Empty;
 
-            // Processar com IA
-            var response = await _aiService.ProcessarMensagemChatAsync(usuario.Id, mensagemParaEnviar);
+            // Incrementar contador de interações antes de processar
+            _model.NumeroInteracoes++;
+
+            // Verificar se já atingiu 3 interações
+            if (_model.NumeroInteracoes >= 3)
+            {
+                // Marcar como direcionado
+                _model.FoiDirecionadoParaTecnico = true;
+
+                // Exibir mensagem de direcionamento para técnico
+                var mensagemDirecionamento = new ChatMensagem
+                {
+                    Texto = "Seu atendimento foi direcionado para um técnico. Em breve você será respondido.",
+                    EhUsuario = false,
+                    DataEnvio = DateTime.Now
+                };
+                _model.Mensagens.Add(mensagemDirecionamento);
+                return;
+            }
+
+            // Processar com IA apenas se ainda não atingiu 3 interações
+            int? chamadoIdParaIA = _chamadoContexto?.Id;
+            var response = await _aiService.ProcessarMensagemChatAsync(usuario.Id, mensagemParaEnviar, chamadoIdParaIA);
 
             if (response != null)
             {
@@ -175,6 +230,8 @@ public class ChatIAModel : INotifyPropertyChanged
     private int? _chamadoId;
     private string _chamadoAssunto = string.Empty;
     private string _chamadoMotivo = string.Empty;
+    private int _numeroInteracoes = 0;
+    private bool _foiDirecionadoParaTecnico = false;
 
     public ObservableCollection<ChatMensagem> Mensagens
     {
@@ -243,6 +300,26 @@ public class ChatIAModel : INotifyPropertyChanged
         set
         {
             _chamadoMotivo = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int NumeroInteracoes
+    {
+        get => _numeroInteracoes;
+        set
+        {
+            _numeroInteracoes = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool FoiDirecionadoParaTecnico
+    {
+        get => _foiDirecionadoParaTecnico;
+        set
+        {
+            _foiDirecionadoParaTecnico = value;
             OnPropertyChanged();
         }
     }

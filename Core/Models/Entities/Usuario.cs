@@ -45,13 +45,14 @@ public class Usuario
 
     private UserRole GetUserRoleFromCargo()
     {
-        if (Cargo == null) return UserRole.Cliente;
-        
-        return Cargo.Nome.ToLower() switch
+        // Mapeamento baseado em CargoId para evitar problemas com nomenclatura
+        // 1 = Admin, 2 = Técnico, 3 = Cliente
+        return CargoId switch
         {
-            "administrador" => UserRole.Administrador,
-            "técnico" or "tecnico" => UserRole.Tecnico,
-            _ => UserRole.Cliente
+            1 => UserRole.Administrador,
+            2 => UserRole.Tecnico,
+            3 => UserRole.Cliente,
+            _ => UserRole.Cliente // Valor padrão para casos inesperados
         };
     }
 }

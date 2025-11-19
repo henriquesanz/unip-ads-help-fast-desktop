@@ -4,21 +4,51 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace HelpFastDesktop.Presentation.Controllers;
 
 public class FAQController : BaseController
 {
     private readonly IFAQService _faqService;
+    private readonly IChamadoService _chamadoService;
+    private readonly ISessionService _sessionService;
     private FAQModel _model;
 
     public FAQController(IServiceProvider serviceProvider) : base(serviceProvider)
     {
         _faqService = serviceProvider.GetRequiredService<IFAQService>();
+        _chamadoService = serviceProvider.GetRequiredService<IChamadoService>();
+        _sessionService = serviceProvider.GetRequiredService<ISessionService>();
         _model = new FAQModel();
     }
 
     public FAQModel GetModel() => _model;
+
+    public async Task<Chamado?> ObterUltimoChamadoAbertoAsync()
+    {
+        try
+        {
+            var usuario = _sessionService.UsuarioLogado;
+            if (usuario == null)
+            {
+                return null;
+            }
+
+            var chamados = await _chamadoService.ListarChamadosDoUsuarioAsync(usuario.Id);
+            var ultimoChamadoAberto = chamados
+                .Where(c => c.Status == "Aberto" || c.Status == "EmAndamento")
+                .OrderByDescending(c => c.DataAbertura)
+                .FirstOrDefault();
+
+            return ultimoChamadoAberto;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao buscar último chamado: {ex.Message}");
+            return null;
+        }
+    }
 
     public async System.Threading.Tasks.Task CarregarFAQsAsync()
     {
@@ -92,6 +122,7 @@ public class FAQModel : INotifyPropertyChanged
     private string _termoBusca = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _isLoading = false;
+    private int? _faqExpandidoId = null;
 
     public ObservableCollection<FAQItem> FAQs
     {
@@ -140,6 +171,33 @@ public class FAQModel : INotifyPropertyChanged
         {
             _isLoading = value;
             OnPropertyChanged();
+        }
+    }
+
+    public int? FAQExpandidoId
+    {
+        get => _faqExpandidoId;
+        set
+        {
+            _faqExpandidoId = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsFAQExpandido(int faqId)
+    {
+        return _faqExpandidoId == faqId;
+    }
+
+    public void ToggleFAQExpandido(int faqId)
+    {
+        if (_faqExpandidoId == faqId)
+        {
+            FAQExpandidoId = null;
+        }
+        else
+        {
+            FAQExpandidoId = faqId;
         }
     }
 

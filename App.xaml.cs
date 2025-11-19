@@ -12,6 +12,8 @@ using System.Windows;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Reflection;
+using System.Text;
 
 namespace HelpFastDesktop;
 
@@ -136,6 +138,57 @@ public partial class App : Application
     static IHostBuilder CreateHostBuilder()
     {
         return Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((context, config) =>
+            {
+                // Carregar configuração do recurso embutido
+                var assembly = Assembly.GetExecutingAssembly();
+                
+                // Tentar diferentes nomes possíveis do recurso
+                var possibleNames = new[]
+                {
+                    "appsettings.json", // LogicalName definido no .csproj
+                    "HelpFastDesktop.appsettings.json", // Namespace + nome
+                    $"{assembly.GetName().Name}.appsettings.json" // Nome do assembly + nome
+                };
+
+                Stream? resourceStream = null;
+                foreach (var resourceName in possibleNames)
+                {
+                    resourceStream = assembly.GetManifestResourceStream(resourceName);
+                    if (resourceStream != null)
+                        break;
+                }
+
+                if (resourceStream != null)
+                {
+                    using (resourceStream)
+                    {
+                        using var reader = new StreamReader(resourceStream, Encoding.UTF8);
+                        var jsonContent = reader.ReadToEnd();
+                        
+                        // Criar um MemoryStream a partir do JSON
+                        var jsonBytes = Encoding.UTF8.GetBytes(jsonContent);
+                        var jsonStream = new MemoryStream(jsonBytes);
+                        
+                        config.AddJsonStream(jsonStream);
+                    }
+                }
+                else
+                {
+                    // Fallback: tentar carregar do arquivo (para desenvolvimento)
+                    var appsettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+                    if (File.Exists(appsettingsPath))
+                    {
+                        config.AddJsonFile(appsettingsPath, optional: false, reloadOnChange: false);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException(
+                            "Não foi possível encontrar appsettings.json nem como recurso embutido nem como arquivo.",
+                            appsettingsPath);
+                    }
+                }
+            })
             .ConfigureServices((context, services) =>
             {
                 var configuration = context.Configuration;

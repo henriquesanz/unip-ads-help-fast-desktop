@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Collections.Generic;
 
 namespace HelpFastDesktop.Core.Services;
 
@@ -28,7 +29,7 @@ public class AIService : IAIService
 
     #region Chat Inteligente
 
-    public async Task<ChatResponse?> ProcessarMensagemChatAsync(int usuarioId, string mensagem)
+    public async Task<ChatResponse?> ProcessarMensagemChatAsync(int usuarioId, string mensagem, int? chamadoId = null)
     {
         try
         {
@@ -36,15 +37,48 @@ public class AIService : IAIService
             var contexto = await ConstruirContextoUsuarioAsync(usuarioId);
 
             var systemPrompt = await ObterSystemPromptAsync(contexto);
-            var respostaTexto = await _openAIService.EnviarPerguntaAsync(mensagem, systemPrompt);
+
+            // Buscar histórico de mensagens do banco se houver ChamadoId
+            var historicoMensagens = new List<ChatMessage>();
+            if (chamadoId.HasValue)
+            {
+                historicoMensagens = await BuscarHistoricoChatAsync(chamadoId.Value);
+            }
+
+            // Enviar mensagem com histórico para OpenAI
+            string respostaTexto;
+            if (historicoMensagens.Count > 0)
+            {
+                respostaTexto = await _openAIService.EnviarPerguntaComHistoricoAsync(mensagem, systemPrompt, historicoMensagens);
+            }
+            else
+            {
+                respostaTexto = await _openAIService.EnviarPerguntaAsync(mensagem, systemPrompt);
+            }
+
+            // Salvar mensagem do usuário na tabela Chats
+            if (chamadoId.HasValue)
+            {
+                // Verificar se é mensagem de contexto inicial ou mensagem normal do usuário
+                string tipoMensagem = mensagem.StartsWith("Estou analisando o chamado") ? "IA_Context" : "IA_User";
+                // Para mensagens do usuário, o destinatário é o próprio usuário (conversa com IA)
+                // O banco não permite NULL em DestinatarioId
+                await SalvarMensagemChatAsync(chamadoId.Value, usuarioId, usuarioId, mensagem, tipoMensagem);
+            }
+
+            // Salvar resposta da IA na tabela Chats
+            if (chamadoId.HasValue)
+            {
+                // Para mensagens da IA, usaremos RemetenteId = usuarioId mas Tipo = "IA_Assistant"
+                // O DestinatarioId também será o usuarioId (usuário recebe a resposta da IA)
+                await SalvarMensagemChatAsync(chamadoId.Value, usuarioId, usuarioId, respostaTexto, "IA_Assistant");
+            }
 
             var response = new ChatResponse
             {
                 Resposta = respostaTexto,
                 EscalarParaHumano = false
             };
-
-            await SalvarInteracaoIAAsync(usuarioId, "Chat", mensagem, response.Resposta, response.Categoria);
 
             return response;
         }
@@ -64,17 +98,77 @@ public class AIService : IAIService
         }
     }
 
-    public async Task<List<InteracaoIA>> ObterHistoricoChatAsync(int usuarioId, int? chamadoId = null)
+    private async Task<List<ChatMessage>> BuscarHistoricoChatAsync(int chamadoId)
     {
-        var query = _context.InteracoesIA
-            .Where(i => i.UsuarioId == usuarioId && i.TipoInteracao == "Chat");
+        try
+        {
+            var chats = await _context.Chats
+                .Where(c => c.ChamadoId == chamadoId && 
+                           (c.Tipo == "IA_User" || c.Tipo == "IA_Assistant" || c.Tipo == "IA_Context"))
+                .OrderBy(c => c.DataEnvio)
+                .ToListAsync();
 
-        if (chamadoId.HasValue)
-            query = query.Where(i => i.ChamadoId == chamadoId);
+            var historico = new List<ChatMessage>();
+            foreach (var chat in chats)
+            {
+                if (chat.Tipo == "IA_User" || chat.Tipo == "IA_Context")
+                {
+                    historico.Add(new ChatMessage
+                    {
+                        Role = "user",
+                        Content = chat.Mensagem
+                    });
+                }
+                else if (chat.Tipo == "IA_Assistant")
+                {
+                    historico.Add(new ChatMessage
+                    {
+                        Role = "assistant",
+                        Content = chat.Mensagem
+                    });
+                }
+            }
 
-        return await query
-            .OrderBy(i => i.DataInteracao)
-            .ToListAsync();
+            return historico;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao buscar histórico de chat para chamado {chamadoId}: {ex.Message}");
+            return new List<ChatMessage>();
+        }
+    }
+
+    private async Task SalvarMensagemChatAsync(int chamadoId, int remetenteId, int? destinatarioId, string mensagem, string tipo)
+    {
+        try
+        {
+            // O banco não permite NULL em DestinatarioId, então usamos o remetenteId como fallback
+            int destinatarioIdFinal = destinatarioId ?? remetenteId;
+
+            var chat = new Chat
+            {
+                ChamadoId = chamadoId,
+                RemetenteId = remetenteId,
+                DestinatarioId = destinatarioIdFinal,
+                Mensagem = mensagem,
+                Tipo = tipo,
+                DataEnvio = DateTime.Now
+            };
+
+            _context.Chats.Add(chat);
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao salvar mensagem de chat: {ex.Message}");
+            // Não lançar exceção para não interromper o fluxo
+        }
+    }
+
+    public async Task SalvarMensagemChatSimplesAsync(int chamadoId, int remetenteId, string mensagem, string tipo)
+    {
+        // O banco não permite NULL em DestinatarioId, então usamos o remetenteId como destinatário
+        await SalvarMensagemChatAsync(chamadoId, remetenteId, remetenteId, mensagem, tipo);
     }
 
     #endregion
@@ -125,11 +219,6 @@ public class AIService : IAIService
                 response.Subcategoria = "Outros";
                 response.Confianca = 0.4m;
             }
-
-            await SalvarInteracaoIAAsync(chamado.UsuarioId, "Categorizacao",
-                $"Título: {chamado.Titulo}\nDescrição: {chamado.Descricao}",
-                $"Categoria sugerida: {response.Categoria} / {response.Subcategoria}",
-                response.Categoria, chamado.Id, response.Confianca);
 
             return response;
         }
@@ -190,11 +279,6 @@ public class AIService : IAIService
             chamado.TecnicoId = tecnicoSelecionado.Id;
             chamado.Status = "EmAndamento";
             await _context.SaveChangesAsync();
-
-            await SalvarInteracaoIAAsync(chamado.UsuarioId, "Atribuicao",
-                $"Chamado {chamadoId} atribuído automaticamente",
-                $"Técnico: {tecnicoSelecionado.Nome} ({tecnicoSelecionado.Email})",
-                chamado.Categoria, chamadoId, 1.0m);
 
             return new AtribuicaoResponse
             {
@@ -426,80 +510,10 @@ public class AIService : IAIService
             contexto["tipoUsuario"] = usuario.TipoUsuario.ToString();
             contexto["nomeUsuario"] = usuario.Nome;
             contexto["emailUsuario"] = usuario.Email;
-
-            // Histórico de interações recentes (com tratamento de erro caso a tabela não exista)
-            try
-            {
-                var historico = await _context.InteracoesIA
-                    .Where(i => i.UsuarioId == usuarioId)
-                    .OrderByDescending(i => i.DataInteracao)
-                    .Take(5)
-                    .Select(i => new { i.Pergunta, i.Resposta })
-                    .ToListAsync();
-
-                contexto["historicoInteracoes"] = historico;
-            }
-            catch (Microsoft.Data.SqlClient.SqlException sqlEx) when (sqlEx.Number == 208) // Invalid object name
-            {
-                Console.WriteLine($"[AI SERVICE] AVISO: Tabela 'InteracoesIA' não existe no banco de dados.");
-                Console.WriteLine($"[AI SERVICE] Execute o script SQL em: scripts/criar_tabela_interacoes_ia.sql");
-                contexto["historicoInteracoes"] = new List<object>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[AI SERVICE] AVISO: Não foi possível buscar histórico de interações. Erro: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"[AI SERVICE] Erro interno: {ex.InnerException.Message}");
-                }
-                contexto["historicoInteracoes"] = new List<object>();
-            }
+            contexto["historicoInteracoes"] = new List<object>();
         }
 
         return contexto;
-    }
-
-    private async Task SalvarInteracaoIAAsync(int usuarioId, string tipoInteracao, string? pergunta, 
-        string? resposta, string? categoria = null, int? chamadoId = null, decimal? confianca = null)
-    {
-        try
-        {
-            // Verificar se a tabela existe antes de tentar salvar
-            if (!await _context.Database.CanConnectAsync())
-            {
-                Console.WriteLine("[AI SERVICE] AVISO: Não foi possível conectar ao banco de dados para salvar interação.");
-                return;
-            }
-
-            var interacao = new InteracaoIA
-            {
-                UsuarioId = usuarioId,
-                TipoInteracao = tipoInteracao,
-                Pergunta = pergunta,
-                Resposta = resposta,
-                Categoria = categoria,
-                ChamadoId = chamadoId,
-                Confianca = confianca,
-                DataInteracao = DateTime.Now
-            };
-
-            _context.InteracoesIA.Add(interacao);
-            await _context.SaveChangesAsync();
-        }
-        catch (Microsoft.Data.SqlClient.SqlException sqlEx) when (sqlEx.Number == 208) // Invalid object name
-        {
-            Console.WriteLine($"[AI SERVICE] AVISO: Tabela 'InteracoesIA' não existe no banco de dados. Interação não foi salva.");
-            Console.WriteLine($"[AI SERVICE] Para criar a tabela, execute o script SQL da documentação ESTRUTURA_DADOS_BANCO.md");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[AI SERVICE] Erro ao salvar interação IA para usuário {usuarioId}: {ex.Message}");
-            Console.WriteLine($"[AI SERVICE] Tipo de exceção: {ex.GetType().Name}");
-            if (ex.InnerException != null)
-            {
-                Console.WriteLine($"[AI SERVICE] Erro interno: {ex.InnerException.Message}");
-            }
-        }
     }
 
     #endregion

@@ -28,7 +28,21 @@
 
         <!-- Content -->
         <Grid Grid.Row="1" Margin="20">
-            <DataGrid ItemsSource="{Binding Usuarios}"
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Error Message -->
+            <TextBlock Grid.Row="0" 
+                       Text="{Binding ErrorMessage}" 
+                       Foreground="Red" 
+                       Margin="0,0,0,10"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+
+            <DataGrid Grid.Row="1"
+                      ItemsSource="{Binding Usuarios}"
                       SelectedItem="{Binding UsuarioSelecionado}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"

@@ -314,35 +314,38 @@ public class UsuarioService : IUsuarioService
     // Métodos de listagem por tipo
     public async Task<List<Usuario>> ListarTecnicosAsync()
     {
+        // CargoId 2 = Técnico
         return await _context.Usuarios
             .Include(u => u.Cargo)
-            .Where(u => u.Cargo != null && (u.Cargo.Nome == "Técnico" || u.Cargo.Nome == "Tecnico"))
+            .Where(u => u.CargoId == 2)
             .OrderBy(u => u.Nome)
             .ToListAsync();
     }
 
     public async Task<List<Usuario>> ListarAdministradoresAsync()
     {
+        // CargoId 1 = Administrador/Admin
         return await _context.Usuarios
             .Include(u => u.Cargo)
-            .Where(u => u.Cargo != null && u.Cargo.Nome == "Administrador")
+            .Where(u => u.CargoId == 1)
             .OrderBy(u => u.Nome)
             .ToListAsync();
     }
 
     public async Task<List<Usuario>> ListarUsuariosPorTipoAsync(UserRole tipoUsuario)
     {
-        var cargoNome = tipoUsuario switch
+        // Mapeamento: 1 = Admin, 2 = Técnico, 3 = Cliente
+        var cargoId = tipoUsuario switch
         {
-            UserRole.Cliente => "Cliente",
-            UserRole.Tecnico => "Técnico",
-            UserRole.Administrador => "Administrador",
-            _ => ""
+            UserRole.Cliente => 3,
+            UserRole.Tecnico => 2,
+            UserRole.Administrador => 1,
+            _ => 0
         };
 
         return await _context.Usuarios
             .Include(u => u.Cargo)
-            .Where(u => u.Cargo != null && (u.Cargo.Nome == cargoNome || u.Cargo.Nome == cargoNome.Replace("é", "e")))
+            .Where(u => u.CargoId == cargoId)
             .OrderBy(u => u.Nome)
             .ToListAsync();
     }

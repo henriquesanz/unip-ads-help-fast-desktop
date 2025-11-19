@@ -19,7 +19,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<ConfiguracaoSistema> ConfiguracoesSistema { get; set; }
     public DbSet<Notificacao> Notificacoes { get; set; }
     public DbSet<LogAuditoria> LogsAuditoria { get; set; }
-    public DbSet<InteracaoIA> InteracoesIA { get; set; }
     public DbSet<ConfiguracaoNotificacao> ConfiguracoesNotificacao { get; set; }
     public DbSet<Metrica> Metricas { get; set; }
     public DbSet<Relatorio> Relatorios { get; set; }
@@ -183,46 +182,6 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.UsuarioId);
             entity.HasIndex(e => e.Lida);
             entity.HasIndex(e => e.DataEnvio);
-            entity.HasIndex(e => e.ChamadoId);
-        });
-
-        // Configuração do modelo InteracaoIA
-        modelBuilder.Entity<InteracaoIA>(entity =>
-        {
-            entity.ToTable("InteracoesIA");
-            entity.HasKey(e => e.Id);
-            
-            // Propriedades obrigatórias
-            entity.Property(e => e.UsuarioId).IsRequired();
-            entity.Property(e => e.TipoInteracao).IsRequired().HasMaxLength(50);
-            entity.Property(e => e.DataInteracao).IsRequired().HasDefaultValueSql("GETUTCDATE()");
-            
-            // Propriedades opcionais
-            entity.Property(e => e.Pergunta).HasMaxLength(1000).IsRequired(false);
-            entity.Property(e => e.Resposta).HasMaxLength(2000).IsRequired(false);
-            entity.Property(e => e.Categoria).HasMaxLength(100).IsRequired(false);
-            entity.Property(e => e.ProblemaResolvido).IsRequired(false);
-            entity.Property(e => e.Satisfacao).IsRequired(false);
-            entity.Property(e => e.TempoResposta).IsRequired(false);
-            entity.Property(e => e.Confianca).IsRequired(false);
-            entity.Property(e => e.ChamadoId).IsRequired(false);
-
-            // Relacionamento com Usuario
-            entity.HasOne(e => e.Usuario)
-                  .WithMany()
-                  .HasForeignKey(e => e.UsuarioId)
-                  .OnDelete(DeleteBehavior.Restrict);
-
-            // Relacionamento com Chamado
-            entity.HasOne(e => e.Chamado)
-                  .WithMany()
-                  .HasForeignKey(e => e.ChamadoId)
-                  .OnDelete(DeleteBehavior.Restrict);
-
-            // Índices para melhor performance
-            entity.HasIndex(e => e.UsuarioId);
-            entity.HasIndex(e => e.TipoInteracao);
-            entity.HasIndex(e => e.DataInteracao);
             entity.HasIndex(e => e.ChamadoId);
         });
     }

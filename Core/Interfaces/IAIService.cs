@@ -6,8 +6,8 @@ namespace HelpFastDesktop.Core.Interfaces;
 public interface IAIService
 {
     // Chat inteligente
-    Task<ChatResponse?> ProcessarMensagemChatAsync(int usuarioId, string mensagem);
-    Task<List<InteracaoIA>> ObterHistoricoChatAsync(int usuarioId, int? chamadoId = null);
+    Task<ChatResponse?> ProcessarMensagemChatAsync(int usuarioId, string mensagem, int? chamadoId = null);
+    Task SalvarMensagemChatSimplesAsync(int chamadoId, int remetenteId, string mensagem, string tipo);
 
     // Categorização automática
     Task<CategorizacaoResponse?> CategorizarChamadoAsync(Chamado chamado);

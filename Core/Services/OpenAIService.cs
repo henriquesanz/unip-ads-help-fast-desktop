@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using HelpFastDesktop.Core.Interfaces;
 using HelpFastDesktop.Core.Models;
 using Microsoft.Extensions.Options;
@@ -51,6 +52,93 @@ public class OpenAIService : IOpenAIService
                 new { role = "system", content = systemPrompt ?? string.Empty },
                 new { role = "user", content = perguntaUsuario }
             },
+            temperature = _options.Temperature,
+            max_tokens = _options.MaxTokens
+        };
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        var json = JsonSerializer.Serialize(payload, _serializerOptions);
+        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"OpenAI retornou status {(int)response.StatusCode}: {responseContent}", null, response.StatusCode);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(responseContent);
+            var root = document.RootElement;
+            var choices = root.GetProperty("choices");
+            if (choices.GetArrayLength() == 0)
+            {
+                throw new InvalidOperationException("OpenAI não retornou nenhuma escolha.");
+            }
+
+            var firstChoice = choices[0];
+            if (firstChoice.TryGetProperty("message", out var messageElement) &&
+                messageElement.TryGetProperty("content", out var contentElement))
+            {
+                return contentElement.GetString() ?? string.Empty;
+            }
+
+            if (firstChoice.TryGetProperty("text", out var textElement))
+            {
+                return textElement.GetString() ?? string.Empty;
+            }
+
+            return responseContent;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw new InvalidOperationException("Formato inesperado na resposta da OpenAI.", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException("Falha ao interpretar a resposta da OpenAI.", ex);
+        }
+    }
+
+    public async Task<string> EnviarPerguntaComHistoricoAsync(string perguntaUsuario, string systemPrompt, List<ChatMessage> historico, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(perguntaUsuario))
+        {
+            throw new ArgumentException("A pergunta do usuário é obrigatória.", nameof(perguntaUsuario));
+        }
+
+        var messages = new List<object>();
+        
+        // Adicionar system prompt primeiro
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            messages.Add(new { role = "system", content = systemPrompt });
+        }
+
+        // Adicionar histórico de mensagens (sem o system prompt)
+        if (historico != null && historico.Count > 0)
+        {
+            foreach (var msg in historico)
+            {
+                if (msg.Role != "system") // Não incluir system messages do histórico
+                {
+                    messages.Add(new { role = msg.Role, content = msg.Content });
+                }
+            }
+        }
+
+        // Adicionar mensagem atual do usuário
+        messages.Add(new { role = "user", content = perguntaUsuario });
+
+        var payload = new
+        {
+            model = _options.ChatModel,
+            messages = messages,
             temperature = _options.Temperature,
             max_tokens = _options.MaxTokens
         };

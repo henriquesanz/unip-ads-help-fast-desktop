@@ -114,9 +114,15 @@
                               Foreground="White"
                               BorderBrush="#505053"
                               Padding="10,8">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="Foreground" Value="Black"/>
+                                <Setter Property="Background" Value="White"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource UserRoleToStringConverter}}"/>
+                                <TextBlock Text="{Binding Converter={StaticResource UserRoleToStringConverter}}" Foreground="Black"/>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>

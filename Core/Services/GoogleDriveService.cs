@@ -72,20 +72,34 @@ public class GoogleDriveService : IGoogleDriveService, IDisposable
 
     private async Task<DriveService> CriarDriveServiceAsync(CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_options.CredenciaisJsonPath))
-        {
-            throw new InvalidOperationException("Configure o caminho do arquivo de credenciais do Google Drive em 'GoogleDrive:CredenciaisJsonPath'.");
-        }
-
-        if (!File.Exists(_options.CredenciaisJsonPath))
-        {
-            throw new FileNotFoundException("O arquivo de credenciais do Google Drive não foi encontrado.", _options.CredenciaisJsonPath);
-        }
-
         GoogleCredential credential;
-        await using (var stream = new FileStream(_options.CredenciaisJsonPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+
+        // Priorizar CredenciaisJson (string JSON direta) sobre CredenciaisJsonPath (caminho de arquivo)
+        if (!string.IsNullOrWhiteSpace(_options.CredenciaisJson))
         {
-            credential = GoogleCredential.FromStream(stream);
+            // Usar credenciais diretamente do JSON string
+            var jsonBytes = Encoding.UTF8.GetBytes(_options.CredenciaisJson);
+            await using (var stream = new MemoryStream(jsonBytes))
+            {
+                credential = GoogleCredential.FromStream(stream);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(_options.CredenciaisJsonPath))
+        {
+            // Fallback para o caminho de arquivo (compatibilidade com versões antigas)
+            if (!File.Exists(_options.CredenciaisJsonPath))
+            {
+                throw new FileNotFoundException("O arquivo de credenciais do Google Drive não foi encontrado.", _options.CredenciaisJsonPath);
+            }
+
+            await using (var stream = new FileStream(_options.CredenciaisJsonPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                credential = GoogleCredential.FromStream(stream);
+            }
+        }
+        else
+        {
+            throw new InvalidOperationException("Configure as credenciais do Google Drive em 'GoogleDrive:CredenciaisJson' (JSON string) ou 'GoogleDrive:CredenciaisJsonPath' (caminho do arquivo).");
         }
 
         var scopes = (_options.Escopos?.Length ?? 0) > 0
