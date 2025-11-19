@@ -43,22 +43,29 @@ public class DashboardController : BaseController
 
     private void ConfigureSections()
     {
+        // Limpar todas as seções e ações antes de configurar
         _model.Sections.Clear();
         _model.AllActions.Clear();
 
         var usuario = _sessionService.UsuarioLogado;
         if (usuario == null) return;
 
+        // Configurar seções baseado no tipo de usuário
+        // IMPORTANTE: Apenas um método deve ser chamado por tipo de usuário
         switch (usuario.TipoUsuario)
         {
             case UserRole.Cliente:
                 ConfigureClienteSections();
                 break;
             case UserRole.Tecnico:
+                // Técnicos devem ver apenas o botão de consultar chamados
                 ConfigureTecnicoSections();
                 break;
             case UserRole.Administrador:
                 ConfigureAdministradorSections();
+                break;
+            default:
+                // Caso padrão: não adiciona nenhuma seção
                 break;
         }
 
@@ -94,6 +101,7 @@ public class DashboardController : BaseController
 
     private void ConfigureTecnicoSections()
     {
+        // Garantir que apenas uma seção seja adicionada para técnicos
         var chamadosSection = new DashboardSection
         {
             Title = "🛠️ Chamados Atribuídos",
@@ -101,7 +109,7 @@ public class DashboardController : BaseController
             {
                 new DashboardAction
                 {
-                    Title = "CHAMADOS ATRIBUÍDOS",
+                    Title = "CONSULTAR CHAMADOS",
                     Description = "Visualizar meus chamados atribuídos",
                     Color = "#0078D7",
                     Command = new RelayCommand(() => NavigateToForm("ChamadosAtribuidos"))

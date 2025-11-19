@@ -243,23 +243,48 @@ public class UsuarioService : IUsuarioService
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Buscar ou criar cargo Técnico
-                var cargoTecnico = await _context.Cargos.FirstOrDefaultAsync(c => c.Nome == "Técnico");
-                if (cargoTecnico == null)
+                // IMPORTANTE: Técnicos devem sempre usar CargoId = 2
+                // Primeiro, verificar se o cargo com ID 2 existe
+                var cargoId2 = await _context.Cargos.FirstOrDefaultAsync(c => c.Id == 2);
+                
+                if (cargoId2 != null)
                 {
-                    cargoTecnico = new Cargo { Nome = "Técnico" };
-                    _context.Cargos.Add(cargoTecnico);
-                    // Salvar cargo primeiro para obter o ID
-                    await _context.SaveChangesAsync();
-                    System.Diagnostics.Debug.WriteLine("Cargo 'Técnico' criado no banco de dados");
+                    // Cargo com ID 2 existe - usar ele (não importa o nome)
+                    tecnico.CargoId = 2;
+                    System.Diagnostics.Debug.WriteLine($"Cargo com ID 2 encontrado. Técnico será criado com CargoId = 2.");
                 }
-                tecnico.CargoId = cargoTecnico.Id;
+                else
+                {
+                    // Cargo com ID 2 não existe - buscar cargo "Técnico" pelo nome
+                    var cargoTecnico = await _context.Cargos.FirstOrDefaultAsync(c => c.Nome == "Técnico");
+                    
+                    if (cargoTecnico != null)
+                    {
+                        // Cargo "Técnico" existe - usar o ID dele
+                        tecnico.CargoId = cargoTecnico.Id;
+                        System.Diagnostics.Debug.WriteLine($"Cargo 'Técnico' encontrado com ID {cargoTecnico.Id}. Técnico será criado com CargoId = {cargoTecnico.Id}.");
+                        if (cargoTecnico.Id != 2)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"ATENÇÃO: Cargo 'Técnico' deveria ter ID 2, mas tem ID {cargoTecnico.Id}. Considere corrigir o banco de dados.");
+                        }
+                    }
+                    else
+                    {
+                        // Nem cargo com ID 2 nem cargo "Técnico" existem - criar novo
+                        var novoCargo = new Cargo { Nome = "Técnico" };
+                        _context.Cargos.Add(novoCargo);
+                        await _context.SaveChangesAsync();
+                        
+                        tecnico.CargoId = novoCargo.Id;
+                        System.Diagnostics.Debug.WriteLine($"Cargo 'Técnico' criado com ID {novoCargo.Id}. Técnico será criado com CargoId = {novoCargo.Id}.");
+                    }
+                }
                 
                 // Criar usuário
                 var usuario = await CriarUsuarioAsync(tecnico);
                 
                 await transaction.CommitAsync();
-                System.Diagnostics.Debug.WriteLine($"Técnico criado com sucesso: {usuario.Nome} (ID: {usuario.Id}, Criado por: {criadoPorId})");
+                System.Diagnostics.Debug.WriteLine($"Técnico criado com sucesso: {usuario.Nome} (ID: {usuario.Id}, CargoId: {usuario.CargoId}, Criado por: {criadoPorId})");
                 return usuario;
             }
             catch (Exception ex)
